@@ -10,6 +10,7 @@ test -f mise.lock
 mise trust /workspace/mise.toml
 mise install --locked
 mise reshim
+git config --local core.hooksPath .githooks
 mise exec -- codex --version
 
 chmod 700 /home/vscode/.codex

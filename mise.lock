@@ -66,6 +66,41 @@ checksum = "sha256:582646c6bf0561eb0de540f7fc85b9121b0091a826bc6e96830b7f1722122
 url = "https://github.com/openai/codex/releases/download/rust-v0.163.0/codex-package-x86_64-unknown-linux-musl.tar.gz"
 url_api = "https://api.github.com/repos/openai/codex/releases/assets/645227523"
 
+[[tools.gitleaks]]
+version = "8.30.0"
+backend = "aqua:gitleaks/gitleaks"
+specifiers = ["8.30.0"]
+
+[tools.gitleaks."platforms.linux-arm64"]
+checksum = "sha256:b4cbbb6ddf7d1b2a603088cd03a4e3f7ce48ee7fd449b51f7de6ee2906f5fa2f"
+url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/321137500"
+
+[tools.gitleaks."platforms.linux-arm64-musl"]
+checksum = "sha256:b4cbbb6ddf7d1b2a603088cd03a4e3f7ce48ee7fd449b51f7de6ee2906f5fa2f"
+url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/321137500"
+
+[tools.gitleaks."platforms.linux-x64"]
+checksum = "sha256:79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
+url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/321137328"
+
+[tools.gitleaks."platforms.linux-x64-baseline"]
+checksum = "sha256:79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
+url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/321137328"
+
+[tools.gitleaks."platforms.linux-x64-musl"]
+checksum = "sha256:79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
+url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/321137328"
+
+[tools.gitleaks."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
+url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/321137328"
+
 [[tools.go]]
 version = "1.27.2"
 backend = "core:go"
@@ -123,3 +158,79 @@ url = "https://unofficial-builds.nodejs.org/download/release/v24.22.0/node-v24.2
 [tools.node."platforms.linux-x64-musl-baseline"]
 checksum = "sha256:72cd253fbe0c2539d52208ed098d47b78ff2c32ba76295d8e6b5b0ce067dcba5"
 url = "https://unofficial-builds.nodejs.org/download/release/v24.22.0/node-v24.22.0-linux-x64-musl.tar.gz"
+
+[[tools.prek]]
+version = "0.5.5"
+backend = "aqua:j178/prek"
+specifiers = ["0.5.5"]
+
+[tools.prek."platforms.linux-arm64"]
+checksum = "sha256:420451a13aaf3de670dfe73b25e18dbca0d96bc3b153cc3924b9d01c3b7caa12"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684496"
+provenance = "github-attestations"
+
+[tools.prek."platforms.linux-arm64-musl"]
+checksum = "sha256:e7208e5d42daaa8d9167971e7d2d3388d80cce241d1cecea745a6c88d6b6368e"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684498"
+provenance = "github-attestations"
+
+[tools.prek."platforms.linux-x64"]
+checksum = "sha256:5470e4aa0fc0ad9d3de7dfaf088fb746d59c2eda3b173c06418e7c8861a520eb"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684555"
+provenance = "github-attestations"
+
+[tools.prek."platforms.linux-x64-baseline"]
+checksum = "sha256:5470e4aa0fc0ad9d3de7dfaf088fb746d59c2eda3b173c06418e7c8861a520eb"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684555"
+provenance = "github-attestations"
+
+[tools.prek."platforms.linux-x64-musl"]
+checksum = "sha256:57948d4772f4eb58387ce4a6d619ecd2d8d7e9d765eed6a316f5b3f92c86d951"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684574"
+provenance = "github-attestations"
+
+[tools.prek."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:57948d4772f4eb58387ce4a6d619ecd2d8d7e9d765eed6a316f5b3f92c86d951"
+url = "https://github.com/j178/prek/releases/download/v0.5.5/prek-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/j178/prek/releases/assets/611684574"
+provenance = "github-attestations"
+
+[[tools.rumdl]]
+version = "0.1.22"
+backend = "aqua:rvben/rumdl"
+specifiers = ["0.1.22"]
+
+[tools.rumdl."platforms.linux-arm64"]
+checksum = "sha256:a6caa1cfaddc44f86b2d19feb15cec75a7939bd3d7a861927194b8dac66195fc"
+url = "https://github.com/rvben/rumdl/releases/download/v0.1.22/rumdl-v0.1.22-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/rvben/rumdl/releases/assets/356684303"
+
+[tools.rumdl."platforms.linux-arm64-musl"]
+checksum = "sha256:f6b71374ddaac9f4069e2f22a14e57077bfc47186643abefc4b96f0ad2b2adab"
+url = "https://github.com/rvben/rumdl/releases/download/v0.1.22/rumdl-v0.1.22-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/rvben/rumdl/releases/assets/356684295"
+
+[tools.rumdl."platforms.linux-x64"]
+checksum = "sha256:7cc24e7e62376365a586d55fe42c5f4fab3f84934ae95f21cbb89118f864db14"
+url = "https://github.com/rvben/rumdl/releases/download/v0.1.22/rumdl-v0.1.22-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/rvben/rumdl/releases/assets/356684302"
+
+[tools.rumdl."platforms.linux-x64-baseline"]
+checksum = "sha256:7cc24e7e62376365a586d55fe42c5f4fab3f84934ae95f21cbb89118f864db14"
+url = "https://github.com/rvben/rumdl/releases/download/v0.1.22/rumdl-v0.1.22-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/rvben/rumdl/releases/assets/356684302"
+
+[tools.rumdl."platforms.linux-x64-musl"]
+checksum = "sha256:6d89241b68718669057f7b61f5a797acc46bfcbe7393df2ff72d23e89dbb6c52"
+url = "https://github.com/rvben/rumdl/releases/download/v0.1.22/rumdl-v0.1.22-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/rvben/rumdl/releases/assets/356684291"
+
+[tools.rumdl."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:6d89241b68718669057f7b61f5a797acc46bfcbe7393df2ff72d23e89dbb6c52"
+url = "https://github.com/rvben/rumdl/releases/download/v0.1.22/rumdl-v0.1.22-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/rvben/rumdl/releases/assets/356684291"

@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://gitlab.com/bmares/check-json5
+    rev: v1.0.0
+    hooks:
+      - id: check-json5
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: Detect secrets in staged changes
+        entry: gitleaks protect --redact --staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+      - id: rumdl
+        name: Check Markdown
+        entry: rumdl check
+        language: system
+        types: [markdown]

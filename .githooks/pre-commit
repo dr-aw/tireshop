@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+if [[ -f /.dockerenv ]]; then
+    exec mise exec -- prek run --hook-stage pre-commit "$@"
+fi
+
+# Alternate indexes cannot be forwarded safely across the bind mount.
+if [[ -n ${GIT_INDEX_FILE:-} && ${GIT_INDEX_FILE} != .git/index ]]; then
+    echo 'Run this commit inside the container: alternate Git index detected.' >&2
+    exit 1
+fi
+exec docker compose -f compose.yaml -f compose.agent.yaml exec -T \
+    -w /workspace agent mise exec -- prek run --hook-stage pre-commit "$@"

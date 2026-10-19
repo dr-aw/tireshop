@@ -1,0 +1,3 @@
+[global]
+# Existing Russian prose and tables use variable line lengths.
+disable = ["MD013"]

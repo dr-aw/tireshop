@@ -43,6 +43,56 @@ mise exec -- codex
 После исправления выполнить `up -d agent`. Healthcheck проверяет завершение
 bootstrap, а не вход в аккаунт и не доступность модели.
 
+## Git: hooks и авторство
+
+Проект использует `.githooks/pre-commit` и `.pre-commit-config.yaml`.
+Hadolint отключён для этого проекта; глобальная конфигурация хоста не меняется.
+Проверяются размеры файлов, YAML/JSON5, маркеры конфликтов, окончания строк,
+пробелы, Markdown и секреты. Markdown проверяется без автоформатирования.
+Ограничение Markdown-строк в 80 символов отключено в `.rumdl.toml`;
+остальные правила остаются включены.
+Версии CLI закреплены в `mise.toml`/`mise.lock`.
+
+Для новой рабочей копии выполнить **на хосте** до запуска agent:
+
+```bash
+git config --local user.name "$(git config user.name)"
+git config --local user.email "$(git config user.email)"
+git config --local core.hooksPath .githooks
+```
+
+Первые две команды копируют ваше текущее Git-авторство в `.git/config`.
+Если имя/email ещё не настроены, укажите их явно. Этот файл не коммитится,
+но доступен контейнеру вместе с рабочей копией. Bootstrap agent и создание
+Dev Container также подключают `.githooks`. Запускать `prek install` не нужно.
+
+Обычный `git commit` на Mac вызывает проверки в уже запущенном сервисе `agent`
+через Compose; внутри dev/agent проверки выполняются напрямую через mise.
+Если agent остановлен или инструмент отсутствует, коммит прерывается.
+На Mac используйте `git add` и обычный `git commit`; коммиты с временным индексом
+(например, `git commit --only`) выполняйте внутри контейнера.
+
+Установка инструментов и ручная проверка из терминала контейнера:
+
+```bash
+mise install --locked
+mise run hooks
+git var GIT_AUTHOR_IDENT
+git var GIT_COMMITTER_IDENT
+```
+
+Первая проверка скачивает окружения hooks; требуется сеть. `mise run hooks`
+проверяет tracked-файлы, а gitleaks — staged-изменения. Hook при коммите проверяет
+staged-содержимое. Если исправлены пробелы или окончания строк, просмотрите diff
+и снова добавьте исправления через `git add`. Новые файлы сначала добавьте в Git.
+Тестов приложения и задач `test`/`lint`/`build` пока нет.
+
+Агент создаёт только локальные коммиты от вашего имени. Push выполняете вы;
+SSH-ключи и токен GitHub контейнеру для авторства не требуются.
+Для [статистики GitHub](https://docs.github.com/en/account-and-profile/how-tos/contribution-settings/troubleshooting-missing-contributions)
+email автора должен быть привязан к вашему аккаунту (можно использовать ваш
+GitHub noreply), а коммиты должны попасть в default branch или `gh-pages`.
+
 ## Что сохраняется
 
 | Данные | Место |
