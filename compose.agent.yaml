@@ -1,0 +1,40 @@
+services:
+  agent:
+    extends:
+      file: compose.yaml
+      service: dev
+
+    build:
+      target: agent
+
+    entrypoint: ["/usr/local/bin/tireshop-bootstrap"]
+    tty: false
+
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/tireshop-bootstrap-ready"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10m
+      retries: 3
+
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+
+    pids_limit: 512
+    mem_limit: 4g
+    cpus: 2
+
+    volumes:
+      - type: bind
+        source: ./.local
+        target: /workspace/.local
+        read_only: true
+      - agent_tools:/home/vscode/.local/share/mise
+      - agent_codex:/home/vscode/.codex
+
+volumes:
+  agent_tools:
+  agent_codex:

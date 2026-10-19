@@ -1,0 +1,17 @@
+{
+  "name": "tireshop-dev",
+  "dockerComposeFile": "../compose.yaml",
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "oven.bun-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}
