@@ -6,6 +6,7 @@ codex = "0.163.0"
 prek = "0.5.5"
 gitleaks = "8.30.0"
 rumdl = "0.1.22"
+"aqua:pressly/goose" = "3.29.0"
 
 [settings]
 lockfile = true
@@ -23,13 +24,31 @@ description = "Check Go code with vet and gofmt"
 run = '''
 set -eu
 go vet ./...
+go vet -tags=integration ./...
 unformatted_go_files=$(gofmt -l internal)
 if [ -n "$unformatted_go_files" ]; then
   printf 'Go files need formatting:\n%s\n' "$unformatted_go_files"
   exit 1
 fi
+for script in scripts/*.sh; do
+  bash -n "$script"
+done
+goose -env none -dir migrations/catalog validate
+goose -env none -dir migrations/requests validate
 '''
 
 [tasks.build]
 description = "Compile existing Go packages (no runnable service yet)"
 run = "go build ./..."
+
+[tasks."test:integration"]
+description = "Test PostgreSQL storage in a new temporary local database, then remove it"
+run = "bash scripts/test-db.sh"
+
+[tasks."db:bootstrap"]
+description = "Provision local database roles and empty schemas for migrations"
+run = "bash scripts/db-bootstrap.sh"
+
+[tasks."db:migrate"]
+description = "Apply catalog and requests SQL migrations to local PostgreSQL"
+run = "bash scripts/db-migrate.sh"

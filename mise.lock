@@ -2,6 +2,41 @@
 
 lockfile_version = 2
 
+[[tools."aqua:pressly/goose"]]
+version = "3.29.0"
+backend = "aqua:pressly/goose"
+specifiers = ["3.29.0"]
+
+[tools."aqua:pressly/goose"."platforms.linux-arm64"]
+checksum = "sha256:efdb8f97176df746cf3970ed40810816a51927da0600b152ac4359ae2b7c0e12"
+url = "https://github.com/pressly/goose/releases/download/v3.29.0/goose_linux_arm64"
+url_api = "https://api.github.com/repos/pressly/goose/releases/assets/631395872"
+
+[tools."aqua:pressly/goose"."platforms.linux-arm64-musl"]
+checksum = "sha256:efdb8f97176df746cf3970ed40810816a51927da0600b152ac4359ae2b7c0e12"
+url = "https://github.com/pressly/goose/releases/download/v3.29.0/goose_linux_arm64"
+url_api = "https://api.github.com/repos/pressly/goose/releases/assets/631395872"
+
+[tools."aqua:pressly/goose"."platforms.linux-x64"]
+checksum = "sha256:cc56e2f75532a4dd52f5ef2d31db0121e91079a9c2617bc0ad4e04e2d41c228b"
+url = "https://github.com/pressly/goose/releases/download/v3.29.0/goose_linux_x86_64"
+url_api = "https://api.github.com/repos/pressly/goose/releases/assets/631396017"
+
+[tools."aqua:pressly/goose"."platforms.linux-x64-baseline"]
+checksum = "sha256:cc56e2f75532a4dd52f5ef2d31db0121e91079a9c2617bc0ad4e04e2d41c228b"
+url = "https://github.com/pressly/goose/releases/download/v3.29.0/goose_linux_x86_64"
+url_api = "https://api.github.com/repos/pressly/goose/releases/assets/631396017"
+
+[tools."aqua:pressly/goose"."platforms.linux-x64-musl"]
+checksum = "sha256:cc56e2f75532a4dd52f5ef2d31db0121e91079a9c2617bc0ad4e04e2d41c228b"
+url = "https://github.com/pressly/goose/releases/download/v3.29.0/goose_linux_x86_64"
+url_api = "https://api.github.com/repos/pressly/goose/releases/assets/631396017"
+
+[tools."aqua:pressly/goose"."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:cc56e2f75532a4dd52f5ef2d31db0121e91079a9c2617bc0ad4e04e2d41c228b"
+url = "https://github.com/pressly/goose/releases/download/v3.29.0/goose_linux_x86_64"
+url_api = "https://api.github.com/repos/pressly/goose/releases/assets/631396017"
+
 [[tools.bun]]
 version = "1.4.3"
 backend = "core:bun"
