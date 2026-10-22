@@ -15,6 +15,16 @@ services:
 
     user: vscode
 
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: tireshop
+      PGDATABASE: tireshop_dev
+      PGPASSWORD_FILE: /run/secrets/postgres_password
+
+    secrets:
+      - postgres_password
+
     volumes:
       - type: bind
         source: .
@@ -32,7 +42,10 @@ services:
     environment:
       POSTGRES_DB: tireshop_dev
       POSTGRES_USER: tireshop
-      POSTGRES_PASSWORD: tireshop_dev
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+
+    secrets:
+      - postgres_password
 
     volumes:
       - postgres_data:/var/lib/postgresql
@@ -49,3 +62,7 @@ services:
 
 volumes:
   postgres_data:
+
+secrets:
+  postgres_password:
+    file: ${POSTGRES_PASSWORD_PATH:-../tireshop-secrets/postgres_password}

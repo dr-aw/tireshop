@@ -14,6 +14,13 @@ repos:
       - id: check-json5
   - repo: local
     hooks:
+      - id: exact-local-secrets
+        name: Detect exact local secrets in staged diff
+        entry: bash scripts/check-staged-secrets.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
       - id: gitleaks
         name: Detect secrets in staged changes
         entry: gitleaks protect --redact --staged
