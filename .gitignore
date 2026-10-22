@@ -20,3 +20,5 @@ coverage/
 *.log
 
 .local/
+.rumdl_cache
+*.swp
