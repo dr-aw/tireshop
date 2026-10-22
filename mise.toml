@@ -13,3 +13,23 @@ lockfile = true
 [tasks.hooks]
 description = "Run commit checks against all tracked files (inside Linux container)"
 run = "prek run --all-files"
+
+[tasks.test]
+description = "Run Go tests with the race detector"
+run = "go test -race ./..."
+
+[tasks.lint]
+description = "Check Go code with vet and gofmt"
+run = '''
+set -eu
+go vet ./...
+unformatted_go_files=$(gofmt -l internal)
+if [ -n "$unformatted_go_files" ]; then
+  printf 'Go files need formatting:\n%s\n' "$unformatted_go_files"
+  exit 1
+fi
+'''
+
+[tasks.build]
+description = "Compile existing Go packages (no runnable service yet)"
+run = "go build ./..."
