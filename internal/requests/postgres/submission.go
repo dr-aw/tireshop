@@ -2,7 +2,8 @@ package postgres
 
 import (
 	"crypto/sha256"
-	"encoding/json"
+	jsonv1 "encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"regexp"
 	"slices"
@@ -70,7 +71,10 @@ func normalize(input Submission) (Submission, [32]byte, error) {
 	}
 	// A fixed struct (no map) and sorted items give a deterministic representation.
 	// Keep this representation stable when evolving the submission contract.
-	payload, err := json.Marshal(input)
+	// Fingerprints are persisted contracts. Keep v1's escaping and formatting
+	// even though the implementation now uses json/v2; otherwise old keys with
+	// characters such as '<' or '&' would incorrectly conflict after an upgrade.
+	payload, err := json.Marshal(input, jsonv1.DefaultOptionsV1())
 	if err != nil {
 		return Submission{}, [32]byte{}, err
 	}

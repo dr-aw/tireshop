@@ -1,6 +1,8 @@
 package postgres
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -36,6 +38,17 @@ func TestNormalizeCanonicalFingerprint(t *testing.T) {
 	_, differentHash, err := normalize(second)
 	if err != nil || hash == differentHash {
 		t.Fatal("changed price did not change fingerprint")
+	}
+	// Existing keys were hashed with json v1. Changing its escaping during a
+	// serializer upgrade must not turn a valid retry into a body conflict.
+	normalized.Comment = "<Buyer>&\u2028test"
+	legacy, err := json.Marshal(normalized)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, upgradedHash, err := normalize(normalized)
+	if err != nil || upgradedHash != sha256.Sum256(legacy) {
+		t.Fatal("serializer upgrade changed a persisted fingerprint")
 	}
 }
 

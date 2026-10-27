@@ -5,7 +5,9 @@
 .secrets/
 
 .idea/
-.vscode/
+!.vscode/
+.vscode/*
+!.vscode/settings.json
 
 node_modules/
 dist/
@@ -14,6 +16,9 @@ coverage/
 
 .tmp/
 .cache/
+.mise/*
+!.mise/locks/
+test-results/
 
 .DS_Store
 

@@ -194,6 +194,30 @@ url = "https://unofficial-builds.nodejs.org/download/release/v24.22.0/node-v24.2
 checksum = "sha256:72cd253fbe0c2539d52208ed098d47b78ff2c32ba76295d8e6b5b0ce067dcba5"
 url = "https://unofficial-builds.nodejs.org/download/release/v24.22.0/node-v24.22.0-linux-x64-musl.tar.gz"
 
+[[tools."npm:@playwright/test"]]
+version = "1.64.1"
+aube = { path = ".mise/locks/npm-playwright-test/1.64.1", digest = "sha256:a6519fefd13e59eddb8a79e765a0d241374a9ca10c7a5c5c5ad0efa997bd67db" }
+backend = "npm:@playwright/test"
+specifiers = ["1.64.1"]
+
+[[tools."npm:prettier"]]
+version = "3.9.10"
+aube = { path = ".mise/locks/npm-prettier/3.9.10", digest = "sha256:0a52cf3e98ebe971f9f0c338c08e668756d290a8d14fe3fd308251084fba1522" }
+backend = "npm:prettier"
+specifiers = ["3.9.10"]
+
+[[tools."npm:typescript"]]
+version = "7.0.2"
+aube = { path = ".mise/locks/npm-typescript/7.0.2", digest = "sha256:3d06b3b23564c68cdad7815c356edb1506fab1c42bfb8c54234134fd9650ec17" }
+backend = "npm:typescript"
+specifiers = ["7.0.2"]
+
+[[tools."npm:vite"]]
+version = "8.3.5"
+aube = { path = ".mise/locks/npm-vite/8.3.5", digest = "sha256:e5c815b99f30bd4ebc50d4ecebf07db8b9539a4a5806f3e1b07428c8f29286a3" }
+backend = "npm:vite"
+specifiers = ["8.3.5"]
+
 [[tools.prek]]
 version = "0.5.5"
 backend = "aqua:j178/prek"

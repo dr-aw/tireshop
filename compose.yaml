@@ -24,6 +24,8 @@ services:
 
     secrets:
       - postgres_password
+      - catalog_password
+      - requests_password
 
     volumes:
       - type: bind
@@ -69,3 +71,7 @@ volumes:
 secrets:
   postgres_password:
     file: ${POSTGRES_PASSWORD_PATH:-../tireshop-secrets/postgres_password}
+  catalog_password:
+    file: ${CATALOG_PASSWORD_PATH:-../tireshop-secrets/catalog_password}
+  requests_password:
+    file: ${REQUESTS_PASSWORD_PATH:-../tireshop-secrets/requests_password}

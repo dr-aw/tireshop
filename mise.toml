@@ -7,6 +7,10 @@ prek = "0.5.5"
 gitleaks = "8.30.0"
 rumdl = "0.1.22"
 "aqua:pressly/goose" = "3.29.0"
+"npm:vite" = "8.3.5"
+"npm:typescript" = "7.0.2"
+"npm:@playwright/test" = "1.64.1"
+"npm:prettier" = "3.9.10"
 
 [settings]
 lockfile = true
@@ -25,7 +29,7 @@ run = '''
 set -eu
 go vet ./...
 go vet -tags=integration ./...
-unformatted_go_files=$(gofmt -l internal)
+unformatted_go_files=$(gofmt -l cmd internal)
 if [ -n "$unformatted_go_files" ]; then
   printf 'Go files need formatting:\n%s\n' "$unformatted_go_files"
   exit 1
@@ -35,11 +39,13 @@ for script in scripts/*.sh; do
 done
 goose -env none -dir migrations/catalog validate
 goose -env none -dir migrations/requests validate
+tsc -p frontend
+prettier --check frontend/src frontend/index.html frontend/tsconfig.json frontend/vite.config.js frontend/e2e
 '''
 
 [tasks.build]
-description = "Compile existing Go packages (no runnable service yet)"
-run = "go build ./..."
+description = "Build independent Go APIs and static frontend"
+run = "mkdir -p build && go build -o build/catalog ./cmd/catalog && go build -o build/requests ./cmd/requests && vite build frontend"
 
 [tasks."test:integration"]
 description = "Test PostgreSQL storage in a new temporary local database, then remove it"
@@ -52,3 +58,23 @@ run = "bash scripts/db-bootstrap.sh"
 [tasks."db:migrate"]
 description = "Apply catalog and requests SQL migrations to local PostgreSQL"
 run = "bash scripts/db-migrate.sh"
+
+[tasks."frontend:install"]
+description = "Install frontend libraries from the Bun lockfile"
+run = "bun install --cwd frontend --frozen-lockfile"
+
+[tasks."db:runtime"]
+description = "Provision restricted local LOGIN accounts from Compose secrets"
+run = "bash scripts/db-runtime.sh"
+
+[tasks."db:seed"]
+description = "Insert synthetic dev products without resetting existing data"
+run = "bash scripts/seed-dev.sh"
+
+[tasks.dev]
+description = "Run local catalog, requests API and Vite"
+run = "bash scripts/dev.sh"
+
+[tasks."test:browser"]
+description = "Test browser checkout against real APIs and a temporary test DB"
+run = "TIRESHOP_BROWSER_TEST=1 bash scripts/test-db.sh"

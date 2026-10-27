@@ -5,6 +5,7 @@
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
   "remoteUser": "vscode",
+  "forwardPorts": [5173],
   "postCreateCommand": "git config --local core.hooksPath .githooks",
   "customizations": {
     "vscode": {
