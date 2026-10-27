@@ -69,19 +69,74 @@ function readSaved(): { saved?: Saved; error?: string } {
   }
 }
 
+const productName = (name: string) =>
+  name.replace(" — демонстрационный товар", "");
+
+// Both catalog and checkout use the same limits. Reaching one never removes a
+// line: deletion is a separate action, so a stray click cannot lose the item.
+function QuantityControl({
+  value,
+  disabled,
+  label,
+  onChange,
+}: {
+  value: number;
+  disabled: boolean;
+  label: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="stepper" role="group" aria-label={label}>
+      <button
+        type="button"
+        aria-label={`Уменьшить: ${label}`}
+        disabled={disabled || value <= 1}
+        onClick={() => onChange(value - 1)}
+      >
+        −
+      </button>
+      <input
+        aria-label={label}
+        type="number"
+        min="1"
+        max="10000"
+        step="1"
+        value={value}
+        disabled={disabled}
+        onChange={(e) =>
+          onChange(
+            Math.max(
+              1,
+              Math.min(10000, Math.trunc(Number(e.target.value)) || 1),
+            ),
+          )
+        }
+      />
+      <button
+        type="button"
+        aria-label={`Увеличить: ${label}`}
+        disabled={disabled || value >= 10000}
+        onClick={() => onChange(value + 1)}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 function Wheel({ rim = false }: { rim?: boolean }) {
   return (
     <svg viewBox="0 0 200 180" aria-hidden="true">
       <ellipse cx="100" cy="158" rx="64" ry="9" fill="#e5e7eb" />
       <g transform="translate(100 84) rotate(-15)">
-        <ellipse rx="60" ry="73" fill="#24272b" />
+        <ellipse rx="60" ry="73" fill={rim ? "#b6bdc5" : "#24272b"} />
         <ellipse
           rx="51"
           ry="65"
           fill="none"
-          stroke="#42464b"
+          stroke={rim ? "#e7e9ec" : "#42464b"}
           strokeWidth="5"
-          strokeDasharray="3 5"
+          strokeDasharray={rim ? undefined : "3 5"}
         />
         <ellipse rx="35" ry="46" fill={rim ? "#c7cbd1" : "#51565d"} />
         <ellipse rx="27" ry="37" fill="#dce0e5" />
@@ -106,6 +161,9 @@ function App() {
   const [initial] = useState(readSaved);
   const [products, setProducts] = useState<Product[]>([]);
   const [catalogError, setCatalogError] = useState("");
+  const [category, setCategory] = useState("all");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("default");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [cart, setCart] = useState<Line[]>([]);
   const [quick, setQuick] = useState<Line[] | null>(null);
@@ -301,61 +359,201 @@ function App() {
     setMessage("");
   }
 
+  // Keep basket edits local until submission. Once an attempt exists, its
+  // saved payload is immutable even if the previous HTTP response was lost.
+  function changeQuantity(id: string, quantity: number) {
+    if (locked) return;
+    const update = (lines: Line[]) =>
+      lines.map((line) =>
+        line.product_id === id ? { ...line, quantity } : line,
+      );
+    if (quick) setQuick((previous) => (previous ? update(previous) : null));
+    else setCart(update);
+  }
+  const visible = products
+    .filter(
+      (p) =>
+        (category === "all" ||
+          (category === "rims"
+            ? p.name.startsWith("Диск")
+            : !p.name.startsWith("Диск"))) &&
+        productName(p.name)
+          .toLocaleLowerCase("ru")
+          .includes(search.trim().toLocaleLowerCase("ru")),
+    )
+    .sort((a, b) =>
+      sort === "low"
+        ? a.unit_price_rub - b.unit_price_rub
+        : sort === "high"
+          ? b.unit_price_rub - a.unit_price_rub
+          : 0,
+    );
+  const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
+
   return (
     <>
       <div className="topline">
         <div className="wrap">
-          Шины и диски для коммерческого транспорта{" "}
-          <span>Без онлайн-оплаты</span>
+          <span>Шины и диски для грузового транспорта</span>
+          <a href="#checkout">Заказать с обратным звонком ↗</a>
         </div>
       </div>
-      <header className="wrap">
-        <a className="logo" href="/">
-          tire<span>shop</span>
-          <small>ШИНЫ И ДИСКИ</small>
-        </a>
-        <nav>
-          <a href="#catalog">Каталог</a>
-          <a href="#checkout">
-            Оформить заявку <b>{cart.reduce((s, l) => s + l.quantity, 0)}</b>
+      <header className="site-header">
+        <div className="wrap header-inner">
+          <a className="logo" href="/" aria-label="tireshop — главная">
+            <span className="logo-symbol" aria-hidden="true">
+              ▰
+            </span>
+            tire<span>shop</span>
+            <small>ГРУЗОВЫЕ ШИНЫ И ДИСКИ</small>
           </a>
-        </nav>
+          <nav aria-label="Главное меню">
+            <a className="active" href="#catalog">
+              Каталог
+            </a>
+            <a href="#how-to-order">Как заказать</a>
+          </nav>
+          <a className="cart-link" href="#checkout">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              aria-hidden="true"
+            >
+              <path d="M3 3h2l3 13h11l2-9H6" />
+              <circle cx="9" cy="20" r="1" />
+              <circle cx="18" cy="20" r="1" />
+            </svg>
+            Корзина <b>{cartCount}</b>
+          </a>
+        </div>
       </header>
       <main className="wrap">
-        <div className="intro">
-          <div>
-            <p className="eyebrow">КАТАЛОГ / ГРУЗОВОЙ ТРАНСПОРТ</p>
-            <h1>
-              Надёжность в каждом
-              <br />
-              километре.
-            </h1>
-            <p>
-              Выберите товары и оставьте контакты.
-              <br />
-              Мы уточним наличие и условия доставки.
-            </p>
-          </div>
-          <div className="intro-mark" aria-hidden="true">
-            22.5<span>ШИНЫ · ДИСКИ</span>
-          </div>
+        <div className="breadcrumbs">
+          <a href="/">Главная</a>
+          <span>/</span>Каталог
         </div>
-        <p className="demo">
-          Демонстрационный каталог · синтетические товары и цены
-        </p>
-        <div className="layout">
-          <section id="catalog">
-            <div className="section-title">
-              <h2>Шины и диски</h2>
-              <span>{products.length} товара</span>
+        <div className="page-heading">
+          <div>
+            <p className="eyebrow">ДЛЯ ГРУЗОВОГО ТРАНСПОРТА</p>
+            <h1>
+              Шины и диски<span>.</span>
+            </h1>
+          </div>
+          <p>
+            Выберите размер.
+            <br />
+            Остальное согласуем при звонке.
+          </p>
+        </div>
+        <div className="catalog-layout" id="catalog">
+          <aside className="filters" aria-label="Категории каталога">
+            <h2>Каталог</h2>
+            {[
+              ["all", "Все товары"],
+              ["tyres", "Грузовые шины"],
+              ["rims", "Грузовые диски"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                className={
+                  category === value
+                    ? "category-link selected"
+                    : "category-link"
+                }
+                aria-pressed={category === value}
+                onClick={() => setCategory(value)}
+              >
+                <span>{label}</span>
+                <span aria-hidden="true">↗</span>
+              </button>
+            ))}
+            <div className="selection-note">
+              <span className="note-icon" aria-hidden="true">
+                ↗
+              </span>
+              <h3>
+                Нужна помощь
+                <br />с выбором?
+              </h3>
+              <p>
+                Добавьте вопрос в комментарий к заявке — разберём детали вместе.
+              </p>
+              <a href="#checkout">К оформлению →</a>
             </div>
-            {catalogError && <p role="alert">{catalogError}</p>}
+          </aside>
+          <section className="catalog-results" aria-label="Товары">
+            <div className="catalog-toolbar">
+              <label className="search">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  aria-hidden="true"
+                >
+                  <circle cx="10" cy="10" r="7" />
+                  <path d="m15 15 6 6" />
+                </svg>
+                <input
+                  type="search"
+                  aria-label="Поиск по каталогу"
+                  placeholder="Название или размер, например 315/70"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </label>
+              <label className="sort">
+                <span>Сортировка</span>
+                <select
+                  aria-label="Сортировка"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                >
+                  <option value="default">По умолчанию</option>
+                  <option value="low">Сначала дешевле</option>
+                  <option value="high">Сначала дороже</option>
+                </select>
+              </label>
+            </div>
+            <div className="results-heading">
+              <span>
+                Найдено: <b>{visible.length}</b>
+              </span>
+              <span>Цена за 1 шт. · ₽</span>
+            </div>
+            {catalogError && (
+              <p role="alert" className="notice">
+                {catalogError}
+              </p>
+            )}
             {!products.length && !catalogError && <p>Загружаем каталог…</p>}
+            {products.length > 0 && !visible.length && (
+              <div className="empty-results">
+                <h3>По вашему запросу ничего не найдено</h3>
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    setSearch("");
+                    setCategory("all");
+                  }}
+                >
+                  Сбросить поиск
+                </button>
+              </div>
+            )}
             <div className="products">
-              {products.map((p) => (
+              {visible.map((p) => (
                 <article className="product" key={p.id}>
                   <div className="product-image">
-                    <span className="tag">ДЕМО</span>
+                    <span className="product-type">
+                      {p.name.startsWith("Диск") ? "ДИСК" : "ШИНА"}
+                    </span>
                     <Wheel rim={p.name.startsWith("Диск")} />
                   </div>
                   <div className="product-body">
@@ -364,124 +562,128 @@ function App() {
                         ? "Грузовой диск"
                         : "Грузовая шина"}
                     </p>
-                    <h3>{p.name.replace(" — демонстрационный товар", "")}</h3>
+                    <h3>{productName(p.name)}</h3>
                     <p className="price">
                       {rub(p.unit_price_rub)} <small>/ шт.</small>
                     </p>
-                    <label className="quantity">
-                      Количество, шт.
-                      <input
-                        aria-label={`Количество: ${p.name}`}
-                        type="number"
-                        min="1"
-                        max="10000"
-                        step="1"
-                        disabled={locked}
+                    <div className="purchase-row">
+                      <QuantityControl
                         value={quantities[p.id] || 1}
-                        onChange={(e) =>
-                          setQuantities({
-                            ...quantities,
-                            [p.id]: Math.max(
-                              1,
-                              Math.min(
-                                10000,
-                                Math.trunc(Number(e.target.value)) || 1,
-                              ),
-                            ),
-                          })
+                        disabled={locked}
+                        label={`Количество: ${productName(p.name)}`}
+                        onChange={(value) =>
+                          setQuantities((prev) => ({ ...prev, [p.id]: value }))
                         }
                       />
-                    </label>
-                    <button disabled={locked} onClick={() => add(p, false)}>
-                      В корзину
-                    </button>
+                      <button
+                        className="add-button"
+                        disabled={locked}
+                        onClick={() => add(p, false)}
+                      >
+                        В корзину
+                      </button>
+                    </div>
                     <button
-                      className="text-button"
+                      className="buy-now"
                       disabled={locked}
                       onClick={() => add(p, true)}
                     >
-                      Купить сейчас →
+                      Купить сейчас <span aria-hidden="true">↗</span>
                     </button>
                   </div>
                 </article>
               ))}
             </div>
-            <div className="assurances">
-              <div>
-                <b>Цена за штуку</b>
-                <p>Все суммы в рублях, без копеек.</p>
-              </div>
-              <div>
-                <b>Одна заявка на корзину</b>
-                <p>Детали согласуем лично.</p>
-              </div>
-            </div>
           </section>
-          <aside id="checkout">
-            <h2>
-              {quick || attempt?.source === "quick"
-                ? "Быстрая заявка"
-                : "Ваша корзина"}
-            </h2>
-            {receipt ? (
-              <div className="receipt" role="status">
-                <span className="check">✓</span>
-                <h3>Заявка получена</h3>
-                <p>Мы свяжемся с вами по указанному телефону.</p>
-                <small>Номер заявки</small>
-                <code>{receipt}</code>
-                <button
-                  className="secondary"
-                  onClick={() => {
-                    try {
-                      sessionStorage.removeItem(storageKey);
-                      setReceipt("");
-                    } catch {
-                      setMessage("Не удалось очистить подтверждение.");
-                    }
-                  }}
-                >
-                  Вернуться к покупкам
-                </button>
-              </div>
-            ) : (
-              <>
+        </div>
+        <section id="checkout" className="checkout">
+          <div className="checkout-heading">
+            <div>
+              <p className="eyebrow">ВАШ ВЫБОР</p>
+              <h2>
+                {quick || attempt?.source === "quick"
+                  ? "Быстрая заявка"
+                  : "Ваша корзина"}
+              </h2>
+            </div>
+            <span>
+              {selected.reduce((sum, line) => sum + line.quantity, 0)} шт.
+            </span>
+          </div>
+          {receipt ? (
+            <div className="receipt" role="status">
+              <span className="check">✓</span>
+              <h3>Заявка получена</h3>
+              <p>Мы свяжемся с вами по указанному телефону.</p>
+              <small>Номер заявки</small>
+              <code>{receipt}</code>
+              <button
+                className="secondary"
+                onClick={() => {
+                  try {
+                    sessionStorage.removeItem(storageKey);
+                    setReceipt("");
+                  } catch {
+                    setMessage("Не удалось очистить подтверждение.");
+                  }
+                }}
+              >
+                Вернуться к покупкам
+              </button>
+            </div>
+          ) : (
+            <div className="checkout-content">
+              <div className="basket-panel">
                 {!selected.length ? (
-                  <p className="muted">
-                    Добавьте товары из каталога — они появятся здесь.
-                  </p>
+                  <div className="empty-basket">
+                    <span aria-hidden="true">＋</span>
+                    <h3>Пока ничего не добавлено</h3>
+                    <p>Выберите шины или диски в каталоге.</p>
+                    <a href="#catalog">Перейти к товарам ↑</a>
+                  </div>
                 ) : (
                   <ul className="basket">
                     {selected.map((l) => (
                       <li key={l.product_id}>
-                        <b>{l.name.replace(" — демонстрационный товар", "")}</b>
-                        <div>
-                          <span>
-                            {l.quantity} шт. × {rub(l.unit_price_rub)}
-                          </span>
-                          {!locked && (
-                            <button
-                              className="remove"
-                              aria-label={`Убрать ${l.name}`}
-                              onClick={() =>
-                                quick
-                                  ? setQuick(null)
-                                  : setCart(
-                                      cart.filter(
-                                        (x) => x.product_id !== l.product_id,
-                                      ),
-                                    )
-                              }
-                            >
-                              ×
-                            </button>
-                          )}
+                        <div className="basket-image">
+                          <Wheel rim={l.name.startsWith("Диск")} />
+                        </div>
+                        <div className="basket-description">
+                          <b>{productName(l.name)}</b>
+                          <span>{rub(l.unit_price_rub)} / шт.</span>
+                        </div>
+                        <div className="basket-actions">
+                          <QuantityControl
+                            value={l.quantity}
+                            disabled={locked}
+                            label={`В корзине: ${productName(l.name)}`}
+                            onChange={(quantity) =>
+                              changeQuantity(l.product_id, quantity)
+                            }
+                          />
+                          <strong>{rub(l.quantity * l.unit_price_rub)}</strong>
+                          <button
+                            className="remove"
+                            disabled={locked}
+                            aria-label={`Убрать ${productName(l.name)}`}
+                            onClick={() =>
+                              quick
+                                ? setQuick(null)
+                                : setCart((prev) =>
+                                    prev.filter(
+                                      (x) => x.product_id !== l.product_id,
+                                    ),
+                                  )
+                            }
+                          >
+                            Удалить
+                          </button>
                         </div>
                       </li>
                     ))}
                   </ul>
                 )}
-                <div className="total">
+                <div className="total" aria-live="polite">
                   <span>Итого</span>
                   <strong>{rub(total(selected))}</strong>
                 </div>
@@ -493,103 +695,131 @@ function App() {
                     Вернуться к корзине
                   </button>
                 )}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    submit();
-                  }}
-                >
-                  <fieldset disabled={locked}>
-                    <legend>Контакты для связи</legend>
-                    <label>
-                      Имя
-                      <input
-                        autoComplete="name"
-                        required
-                        maxLength={100}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Телефон
-                      <input
-                        type="tel"
-                        autoComplete="tel"
-                        placeholder="+7 999 123-45-67"
-                        pattern="\+[0-9 \(\)\-]{8,30}"
-                        required
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Комментарий <span className="muted">· необязательно</span>
-                      <textarea
-                        maxLength={2000}
-                        rows={2}
-                        value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                      />
-                    </label>
-                  </fieldset>
-                  {message && (
-                    <p className="notice" role="status">
-                      {message}
-                    </p>
-                  )}
-                  {newPrices ? (
-                    <div className="quote">
-                      <h3>Обновлённые цены</h3>
-                      {newPrices.map((l) => (
-                        <p key={l.product_id}>
-                          {l.name}: {l.quantity} × {rub(l.unit_price_rub)}
-                        </p>
-                      ))}
-                      <strong>Итого: {rub(total(newPrices))}</strong>
-                      <button
-                        type="button"
-                        disabled={busy || blocked}
-                        onClick={() => submit(newPrices)}
-                      >
-                        Подтвердить {rub(total(newPrices))}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="submit"
-                      disabled={!selected.length || busy || blocked}
-                    >
-                      {busy
-                        ? "Отправляем…"
-                        : attempt
-                          ? "Повторить отправку"
-                          : "Оформить заявку"}
-                    </button>
-                  )}
-                  {canEdit && (
+                <p className="basket-caption">
+                  Без предоплаты на сайте. Стоимость доставки уточним отдельно.
+                </p>
+              </div>{" "}
+              <form
+                className="contact-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submit();
+                }}
+              >
+                <fieldset disabled={locked}>
+                  <legend>Оформление заявки</legend>
+                  <label>
+                    Имя
+                    <input
+                      autoComplete="name"
+                      required
+                      maxLength={100}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Телефон
+                    <input
+                      type="tel"
+                      autoComplete="tel"
+                      placeholder="+7 999 123-45-67"
+                      pattern="\+[0-9 \(\)\-]{8,30}"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Комментарий <span className="muted">· необязательно</span>
+                    <textarea
+                      maxLength={2000}
+                      rows={2}
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                    />
+                  </label>
+                </fieldset>
+                {message && (
+                  <p className="notice" role="status">
+                    {message}
+                  </p>
+                )}
+                {newPrices ? (
+                  <div className="quote">
+                    <h3>Обновлённые цены</h3>
+                    {newPrices.map((l) => (
+                      <p key={l.product_id}>
+                        {productName(l.name)}: {l.quantity} ×{" "}
+                        {rub(l.unit_price_rub)}
+                      </p>
+                    ))}
+                    <strong>Итого: {rub(total(newPrices))}</strong>
                     <button
                       type="button"
-                      className="text-button"
                       disabled={busy || blocked}
-                      onClick={edit}
+                      onClick={() => submit(newPrices)}
                     >
-                      Изменить заявку
+                      Подтвердить {rub(total(newPrices))}
                     </button>
-                  )}
-                  <p className="fineprint">
-                    Это заявка на покупку, без оплаты и автоматического резерва.
-                    Наличие и доставку подтвердит сотрудник.
-                  </p>
-                </form>
-              </>
-            )}
-          </aside>
-        </div>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!selected.length || busy || blocked}
+                  >
+                    {busy
+                      ? "Отправляем…"
+                      : attempt
+                        ? "Повторить отправку"
+                        : "Оформить заявку"}
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={busy || blocked}
+                    onClick={edit}
+                  >
+                    Изменить заявку
+                  </button>
+                )}
+                <p className="fineprint">
+                  После отправки мы свяжемся с вами, чтобы подтвердить наличие и
+                  согласовать доставку.
+                </p>
+              </form>
+            </div>
+          )}
+        </section>
+        <section className="how-to-order" id="how-to-order">
+          <h2>От выбора до заказа</h2>
+          <div>
+            <span>01</span>
+            <h3>Соберите корзину</h3>
+            <p>Выберите товары и нужное количество.</p>
+          </div>
+          <div>
+            <span>02</span>
+            <h3>Оставьте контакты</h3>
+            <p>Имя, телефон и пожелания к заказу.</p>
+          </div>
+          <div>
+            <span>03</span>
+            <h3>Дождитесь звонка</h3>
+            <p>Подтвердим наличие и обсудим доставку.</p>
+          </div>
+        </section>
       </main>
-      <footer className="wrap">
-        <b>tireshop</b>
-        <span>Шины и диски · демонстрационная версия</span>
+      <footer>
+        <div className="wrap footer-inner">
+          <a className="logo" href="/">
+            tire<span>shop</span>
+          </a>
+          <span>Грузовые шины и диски</span>
+          <a href="#catalog">Каталог ↑</a>
+        </div>
       </footer>
     </>
   );

@@ -9,8 +9,20 @@ test("lost committed response survives reload and retries the exact attempt", as
   const card = page
     .locator("article")
     .filter({ hasText: "Browser synthetic tyre" });
-  await card.getByRole("spinbutton").fill("2");
+
   await card.getByRole("button", { name: "В корзину", exact: true }).click();
+  const basket = page.locator(".basket");
+  const minus = basket.getByRole("button", { name: /^Уменьшить:/ });
+  const plus = basket.getByRole("button", { name: /^Увеличить:/ });
+  await expect(minus).toBeDisabled();
+  await plus.click();
+  await plus.click();
+  await minus.click();
+  await expect(basket.getByRole("spinbutton")).toHaveValue("2");
+  await expect(page.locator(".total")).toContainText(
+    "36 000".replace(" ", "\u00a0"),
+  );
+
   await page.getByLabel("Имя", { exact: true }).fill("Browser Buyer");
   await page.getByLabel("Телефон", { exact: true }).fill("+79000000000");
   let original, requestID;
@@ -29,6 +41,9 @@ test("lost committed response survives reload and retries the exact attempt", as
     .getByRole("button", { name: "Оформить заявку", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Ответ не получен");
+  expect(JSON.parse(original.body).items[0].quantity).toBe(2);
+  await expect(plus).toBeDisabled();
+  await expect(minus).toBeDisabled();
   await page.unroute("**/api/requests");
   await page.reload();
   await expect(page.getByLabel("Имя", { exact: true })).toBeDisabled();
@@ -100,5 +115,26 @@ test("buy now confirms an updated price with a new key and keeps the basket", as
   expect(sent[1].body.items[0].expected_unit_price_rub).toBe(18000);
   expect(sent[1].body.items[0].quantity).toBe(1);
   await page.getByRole("button", { name: "Вернуться к покупкам" }).click();
-  await expect(page.locator(".basket")).toContainText("2 шт.");
+  await expect(page.locator(".basket").getByRole("spinbutton")).toHaveValue(
+    "2",
+  );
+  await page
+    .locator(".basket")
+    .getByRole("button", { name: /^Уменьшить:/ })
+    .click();
+  await expect(page.locator(".basket").getByRole("spinbutton")).toHaveValue(
+    "1",
+  );
+  await expect(
+    page.locator(".basket").getByRole("button", { name: /^Уменьшить:/ }),
+  ).toBeDisabled();
+  await page.locator(".basket").getByRole("spinbutton").fill("10000");
+  await expect(
+    page.locator(".basket").getByRole("button", { name: /^Увеличить:/ }),
+  ).toBeDisabled();
+  await page
+    .locator(".basket")
+    .getByRole("button", { name: /^Убрать / })
+    .click();
+  await expect(page.getByText("Пока ничего не добавлено")).toBeVisible();
 });
