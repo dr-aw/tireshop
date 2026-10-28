@@ -142,10 +142,14 @@ func TestBrowserLostResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 	const origin = "http://127.0.0.1:5174"
-	cs := httptest.NewServer(Catalog(catalog))
-	defer cs.Close()
+	t.Setenv("ADMIN_LOCAL_HTTP", "1")
+	provisionTestAdmin(t, adminDB(t), "browser-admin")
 	rs := httptest.NewServer(Requests(requests, []string{origin}))
 	defer rs.Close()
+	t.Setenv("ADMIN_SESSION_URL", rs.URL+"/api/admin/session")
+	t.Setenv("APP_ORIGINS", origin)
+	cs := httptest.NewServer(Catalog(catalog))
+	defer cs.Close()
 	root, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatal(err)

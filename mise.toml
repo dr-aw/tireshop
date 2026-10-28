@@ -75,6 +75,10 @@ run = "bash scripts/seed-dev.sh"
 description = "Run local catalog, requests API and Vite"
 run = "bash scripts/dev.sh"
 
+[tasks."admin:user"]
+description = "Create/reset a local admin from a private password file; revoke sessions"
+run = "bash scripts/admin-user.sh"
+
 [tasks."test:browser"]
 description = "Test browser checkout against real APIs and a temporary test DB"
 run = "TIRESHOP_BROWSER_TEST=1 bash scripts/test-db.sh"

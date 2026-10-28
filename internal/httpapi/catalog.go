@@ -21,11 +21,13 @@ type productDTO struct {
 	Available    bool   `json:"available"`
 }
 
-// Catalog exposes public product data only. Pagination bounds the query and
-// response; unavailable products are omitted from lists but can be read by ID.
+// Catalog separates public reads from session-protected administration.
+// Pagination bounds responses; unavailable products are omitted from public
+// lists but can be read by ID.
 func Catalog(pool *pgxpool.Pool) http.Handler {
 	mux := http.NewServeMux()
 	health(mux, pool)
+	catalogAdminDefaults(mux, pool)
 	mux.HandleFunc("GET /api/products", func(w http.ResponseWriter, r *http.Request) {
 		limit, offset := 24, 0
 		var err error

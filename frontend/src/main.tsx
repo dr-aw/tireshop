@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
+import { Administrator } from "./administrator";
 
 type Product = {
   id: string;
@@ -824,4 +825,10 @@ function App() {
     </>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  /^\/administrator\/?$/.test(window.location.pathname) ? (
+    <Administrator />
+  ) : (
+    <App />
+  ),
+);

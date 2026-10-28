@@ -3,6 +3,8 @@
 # still has its own entry point, port, restricted DB login and lifecycle.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# This task serves local HTTP only. Independently started APIs default to Secure.
+export ADMIN_LOCAL_HTTP=1
 mkdir -p build
 mise exec -- go build -o build/catalog ./cmd/catalog
 mise exec -- go build -o build/requests ./cmd/requests

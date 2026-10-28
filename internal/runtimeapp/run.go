@@ -15,8 +15,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"tireshop/internal/httpapi"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Run owns the server and pool lifetime. Runtime logins inherit only their
@@ -36,6 +37,8 @@ func Run(service string) error {
 	if err != nil || len(strings.TrimSpace(string(password))) == 0 {
 		return errors.New("runtime password file missing or empty; provision Compose secrets first")
 	}
+
+	// Configure a pool
 	config, err := pgxpool.ParseConfig("host=postgres port=5432 sslmode=disable")
 	if err != nil {
 		return errors.New("invalid database configuration")
@@ -69,8 +72,14 @@ func Run(service string) error {
 	}
 	server := &http.Server{Addr: env("HTTP_ADDR", addr), Handler: handler, ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
+
+	// buffered to avoid goroutine leak if shutdown is immediate
 	finished := make(chan error, 1)
-	go func() { finished <- server.ListenAndServe() }()
+
+	go func() {
+		finished <- server.ListenAndServe()
+	}()
+
 	log.Printf("%s listening on %s", service, server.Addr)
 	select {
 	case err := <-finished:

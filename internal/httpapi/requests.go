@@ -26,11 +26,13 @@ type submissionInput struct {
 	Items        []itemInput `json:"items"`
 }
 
-// Requests deliberately exposes no read/admin routes. Anonymous clients may
-// submit a basket, but knowing a UUID never grants access to contacts or history.
+// Requests keeps public submissions separate from session-protected admin APIs.
 func Requests(pool *pgxpool.Pool, allowedOrigins []string) http.Handler {
 	mux := http.NewServeMux()
 	health(mux, pool)
+	admin := adminGate{pool: pool, origins: allowedOrigins}
+	admin.routes(mux)
+	admin.requestRoutes(mux)
 	store := postgres.New(pool)
 	limits := &limiter{clients: make(map[string]bucket)}
 	inflight := make(chan struct{}, 8)
