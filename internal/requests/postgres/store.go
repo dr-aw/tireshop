@@ -122,7 +122,7 @@ func loadProducts(ctx context.Context, tx pgx.Tx, items []requests.RequestedItem
 	for i, item := range items {
 		ids[i] = item.ProductID
 	}
-	rows, err := tx.Query(ctx, `SELECT product_id::text, name, unit_price_rub, is_available
+	rows, err := tx.Query(ctx, `SELECT product_id::text, name, unit_price_rub, is_available, unit_label
 		FROM catalog.request_products_v1 WHERE product_id = ANY($1::uuid[])`, ids)
 	if err != nil {
 		return nil, fmt.Errorf("read catalog contract: %w", err)
@@ -132,7 +132,7 @@ func loadProducts(ctx context.Context, tx pgx.Tx, items []requests.RequestedItem
 	for rows.Next() {
 		var id string
 		var product requests.Product
-		if err := rows.Scan(&id, &product.Name, &product.UnitPriceRub, &product.Available); err != nil {
+		if err := rows.Scan(&id, &product.Name, &product.UnitPriceRub, &product.Available, &product.UnitLabel); err != nil {
 			return nil, err
 		}
 		products[id] = product
@@ -149,9 +149,9 @@ func insertRequest(ctx context.Context, tx pgx.Tx, input Submission, quote reque
 	}
 	for _, item := range quote.Items {
 		if _, err := tx.Exec(ctx, `INSERT INTO requests.request_items
-			(request_id, product_id, name, quantity, unit_price_rub, total_rub)
-			VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)`,
-			id, item.ProductID, item.Name, item.Quantity, item.UnitPriceRub, item.TotalRub); err != nil {
+			(request_id, product_id, name, quantity, unit_price_rub, total_rub, unit_label)
+			VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6,$7)`,
+			id, item.ProductID, item.Name, item.Quantity, item.UnitPriceRub, item.TotalRub, item.UnitLabel); err != nil {
 			return "", fmt.Errorf("insert request item: %w", err)
 		}
 	}

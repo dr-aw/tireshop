@@ -1,7 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import "./administrator.css";
+import {
+  DetailsEditor,
+  emptyDetails,
+  unitLabel,
+  type CatalogDetails,
+} from "./catalog-details";
 
 type Product = {
+  details?: CatalogDetails;
   id: string;
   name: string;
   unit_price_rub: number;
@@ -10,6 +17,7 @@ type Product = {
   version: number;
 };
 type Item = {
+  unit_label?: string;
   product_id: string;
   name: string;
   quantity: number;
@@ -84,6 +92,7 @@ export function Administrator() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [tab, setTab] = useState("requests");
+  const [kind, setKind] = useState("");
   const [requests, setRequests] = useState<Request[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [choices, setChoices] = useState<Product[]>([]);
@@ -115,14 +124,18 @@ export function Administrator() {
       setBusy(false);
     }
   }
-  async function load(which: string, start: number) {
+  async function load(which: string, start: number, category = kind) {
     if (which === "requests")
       setRequests(
         (await api<{ items: Request[] }>(`requests?offset=${start}`)).items,
       );
     else
       setProducts(
-        (await api<{ items: Product[] }>(`products?offset=${start}`)).items,
+        (
+          await api<{ items: Product[] }>(
+            `products?offset=${start}&kind=${category}`,
+          )
+        ).items,
       );
     setOffset(start);
     setTab(which);
@@ -271,6 +284,7 @@ export function Administrator() {
                 Каталог и остатки
               </button>
               <button
+                className="admin-refresh"
                 disabled={busy}
                 onClick={() =>
                   void run(async () => {
@@ -280,7 +294,7 @@ export function Administrator() {
                   })
                 }
               >
-                Обновить данные
+                <span aria-hidden="true">⟳</span> Обновить данные
               </button>
             </nav>
             <div className="admin-heading">
@@ -308,6 +322,7 @@ export function Administrator() {
                       stock: 0,
                       available: true,
                       version: 0,
+                      details: emptyDetails(),
                     })
                   }
                 >
@@ -315,6 +330,29 @@ export function Administrator() {
                 </button>
               )}
             </div>
+            {tab === "products" && !product && (
+              <div className="admin-categories" aria-label="Категория каталога">
+                {[
+                  ["", "Все товары"],
+                  ["tyre", "Шины"],
+                  ["wheel", "Диски"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    aria-pressed={kind === value}
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        await load("products", 0, value);
+                        setKind(value);
+                      })
+                    }
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div
               className="admin-card admin-table-wrap"
               hidden={!!detail || !!product}
@@ -326,8 +364,8 @@ export function Administrator() {
                       ? ["Заявка / дата", "Покупатель", "Статус", "Сумма", ""]
                       : [
                           "Товар",
-                          "Цена за шт.",
-                          "Остаток, шт.",
+                          "Цена за единицу",
+                          "Остаток",
                           "На витрине",
                           "",
                         ]
@@ -366,9 +404,20 @@ export function Administrator() {
                       ))
                     : products.map((p) => (
                         <tr key={p.id}>
-                          <td>{p.name}</td>
+                          <td>
+                            {p.name}
+                            <small>{p.details?.sku}</small>
+                            {p.details?.review_notes && (
+                              <small>{p.details.review_notes}</small>
+                            )}
+                          </td>
                           <td>{money(p.unit_price_rub)}</td>
-                          <td>{p.stock}</td>
+                          <td>
+                            {p.stock}
+                            {(p.details?.units_per_sale || 1) > 1 && (
+                              <small>{unitLabel(p.details)}</small>
+                            )}
+                          </td>
                           <td>{p.available ? "Да" : "Скрыт"}</td>
                           <td>
                             <button
@@ -454,7 +503,9 @@ export function Administrator() {
                   </label>
                   <div className="admin-fields">
                     <label>
-                      Цена за штуку, ₽
+                      {(product.details?.units_per_sale || 1) > 1
+                        ? `Цена за ${unitLabel(product.details)}, ₽`
+                        : "Цена за штуку, ₽"}
                       <input
                         type="number"
                         required
@@ -471,7 +522,9 @@ export function Administrator() {
                       />
                     </label>
                     <label>
-                      Текущий остаток, шт.
+                      {(product.details?.units_per_sale || 1) > 1
+                        ? "Текущий остаток, комплектов"
+                        : "Текущий остаток, шт."}
                       <input
                         type="number"
                         required
@@ -488,6 +541,15 @@ export function Administrator() {
                       />
                     </label>
                   </div>
+                  {product.details && (
+                    <DetailsEditor
+                      value={product.details}
+                      existing={product.version > 0}
+                      onChange={(details) =>
+                        setProduct({ ...product, details })
+                      }
+                    />
+                  )}
                   <label className="admin-check">
                     <input
                       type="checkbox"
@@ -576,7 +638,9 @@ function RequestEditor({
             <div className="admin-line" key={item.product_id}>
               <div>
                 {item.name}
-                <small>{money(item.unit_price_rub)} / шт.</small>
+                <small>
+                  {money(item.unit_price_rub)} / {item.unit_label || "шт."}
+                </small>
               </div>
               <label>
                 Количество
@@ -629,7 +693,8 @@ function RequestEditor({
                     )
                     .map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} · {money(p.unit_price_rub)} · {p.stock} шт.
+                        {p.name} · {money(p.unit_price_rub)} · {p.stock}{" "}
+                        {unitLabel(p.details)}
                       </option>
                     ))}
                 </select>
@@ -646,6 +711,7 @@ function RequestEditor({
                         product_id: p.id,
                         name: p.name,
                         unit_price_rub: p.unit_price_rub,
+                        unit_label: unitLabel(p.details),
                         quantity: 1,
                       },
                     ]);
@@ -732,8 +798,8 @@ function RequestEditor({
                   <ul>
                     {snapshot.items.map((item) => (
                       <li key={item.product_id}>
-                        {item.name} — {item.quantity} шт. ×{" "}
-                        {money(item.unit_price_rub)}
+                        {item.name} — {item.quantity} {item.unit_label || "шт."}{" "}
+                        × {money(item.unit_price_rub)}
                       </li>
                     ))}
                   </ul>

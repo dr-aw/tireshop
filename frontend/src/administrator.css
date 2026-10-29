@@ -126,6 +126,20 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+.admin-nav .admin-refresh {
+  margin-left: auto;
+}
+.admin-categories {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+.admin-categories [aria-pressed="true"] {
+  color: #b01c2b;
+  background: #fff0f1;
+  border-color: #dfabb0;
+}
 .admin-nav [aria-pressed="true"] {
   color: #b01c2b;
   background: #fff0f1;

@@ -2,14 +2,27 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import { Administrator } from "./administrator";
+import { ProductPage } from "./product-page";
+import { BasketPhoto } from "./basket-photo";
+import {
+  ProductPhotos,
+  ProductSpecifications,
+  type CatalogDetails,
+} from "./catalog-details";
 
 type Product = {
+  unit_label?: string;
+  details?: CatalogDetails;
+  images?: { url: string }[];
+  stock?: number;
   id: string;
   name: string;
   unit_price_rub: number;
   available: boolean;
 };
 type Line = {
+  image_url?: string;
+  unit_label?: string;
   product_id: string;
   name: string;
   quantity: number;
@@ -159,6 +172,9 @@ function Wheel({ rim = false }: { rim?: boolean }) {
 }
 
 function App() {
+  const productID = /^\/products\/([0-9a-f-]{36})\/?$/i.exec(
+    window.location.pathname,
+  )?.[1];
   const [initial] = useState(readSaved);
   const [products, setProducts] = useState<Product[]>([]);
   const [catalogError, setCatalogError] = useState("");
@@ -166,7 +182,42 @@ function App() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("default");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [cart, setCart] = useState<Line[]>([]);
+  const [cart, setCart] = useState<Line[]>(() => {
+    try {
+      const items = JSON.parse(
+        localStorage.getItem("tireshop.cart.v1") || "[]",
+      );
+      if (!Array.isArray(items) || items.length > 100) return [];
+      const ids = new Set<string>();
+      return items.filter((i: Line) => {
+        if (
+          !i ||
+          typeof i.product_id !== "string" ||
+          ids.has(i.product_id) ||
+          typeof i.name !== "string" ||
+          !Number.isSafeInteger(i.quantity) ||
+          i.quantity < 1 ||
+          i.quantity > 10000 ||
+          !Number.isSafeInteger(i.unit_price_rub) ||
+          i.unit_price_rub < 0
+        )
+          return false;
+        ids.add(i.product_id);
+        return true;
+      });
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("tireshop.cart.v1", JSON.stringify(cart));
+    } catch {
+      setMessage(
+        "Не удалось сохранить корзину в браузере. Она доступна до закрытия страницы.",
+      );
+    }
+  }, [cart]);
   const [quick, setQuick] = useState<Line[] | null>(null);
   const [attempt, setAttempt] = useState<Attempt | undefined>(
     initial.saved && "attempt" in initial.saved
@@ -195,10 +246,25 @@ function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/products", { signal: controller.signal })
+    fetch(productID ? `/api/products/${productID}` : "/api/products", {
+      signal: controller.signal,
+    })
       .then(async (r) => {
         if (!r.ok) throw Error();
-        const data = await r.json();
+        const response = await r.json();
+        const data = productID ? { items: [response] } : response;
+        let pageLength = data.items.length;
+        while (!productID && (pageLength === 24 || pageLength === 100)) {
+          const next = await fetch(
+            `/api/products?limit=100&offset=${data.items.length}`,
+            { signal: controller.signal },
+          );
+          if (!next.ok) throw Error();
+          const page = await next.json();
+          pageLength = page.items.length;
+          data.items.push(...page.items);
+          if (data.items.length > 100000) throw Error();
+        }
         setProducts(data.items);
       })
       .catch((e) => {
@@ -321,6 +387,8 @@ function App() {
       name: p.name,
       quantity: quantities[p.id] || 1,
       unit_price_rub: p.unit_price_rub,
+      unit_label: p.unit_label || "шт.",
+      image_url: p.images?.[0]?.url,
     };
     setReceipt("");
     setMessage("");
@@ -376,9 +444,15 @@ function App() {
       (p) =>
         (category === "all" ||
           (category === "rims"
-            ? p.name.startsWith("Диск")
-            : !p.name.startsWith("Диск"))) &&
-        productName(p.name)
+            ? p.details?.kind === "wheel" || p.name.startsWith("Диск")
+            : !(p.details?.kind === "wheel" || p.name.startsWith("Диск")))) &&
+        (
+          productName(p.name) +
+          " " +
+          (p.details?.sku || "") +
+          " " +
+          (p.details?.size || "")
+        )
           .toLocaleLowerCase("ru")
           .includes(search.trim().toLocaleLowerCase("ru")),
     )
@@ -433,170 +507,229 @@ function App() {
         </div>
       </header>
       <main className="wrap">
-        <div className="breadcrumbs">
-          <a href="/">Главная</a>
-          <span>/</span>Каталог
-        </div>
-        <div className="page-heading">
-          <div>
-            <p className="eyebrow">ДЛЯ ГРУЗОВОГО ТРАНСПОРТА</p>
-            <h1>
-              Шины и диски<span>.</span>
-            </h1>
-          </div>
-          <p>
-            Выберите размер.
-            <br />
-            Остальное согласуем при звонке.
-          </p>
-        </div>
-        <div className="catalog-layout" id="catalog">
-          <aside className="filters" aria-label="Категории каталога">
-            <h2>Каталог</h2>
-            {[
-              ["all", "Все товары"],
-              ["tyres", "Грузовые шины"],
-              ["rims", "Грузовые диски"],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                className={
-                  category === value
-                    ? "category-link selected"
-                    : "category-link"
-                }
-                aria-pressed={category === value}
-                onClick={() => setCategory(value)}
-              >
-                <span>{label}</span>
-                <span aria-hidden="true">↗</span>
-              </button>
-            ))}
-            <div className="selection-note">
-              <span className="note-icon" aria-hidden="true">
-                ↗
-              </span>
-              <h3>
-                Нужна помощь
-                <br />с выбором?
-              </h3>
-              <p>
-                Добавьте вопрос в комментарий к заявке — разберём детали вместе.
-              </p>
-              <a href="#checkout">К оформлению →</a>
+        {productID ? (
+          products[0] ? (
+            <ProductPage
+              product={products[0]}
+              quantity={quantities[productID] || 1}
+              setQuantity={(n) =>
+                setQuantities((q) => ({ ...q, [productID]: n }))
+              }
+              add={() => add(products[0], false)}
+              buy={() => add(products[0], true)}
+              locked={locked}
+              fallback={<Wheel rim={products[0].details?.kind === "wheel"} />}
+            />
+          ) : (
+            <p role={catalogError ? "alert" : "status"}>
+              {catalogError || "Загружаем товар…"}
+            </p>
+          )
+        ) : (
+          <>
+            <div className="breadcrumbs">
+              <a href="/">Главная</a>
+              <span>/</span>Каталог
             </div>
-          </aside>
-          <section className="catalog-results" aria-label="Товары">
-            <div className="catalog-toolbar">
-              <label className="search">
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  aria-hidden="true"
-                >
-                  <circle cx="10" cy="10" r="7" />
-                  <path d="m15 15 6 6" />
-                </svg>
-                <input
-                  type="search"
-                  aria-label="Поиск по каталогу"
-                  placeholder="Название или размер, например 315/70"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </label>
-              <label className="sort">
-                <span>Сортировка</span>
-                <select
-                  aria-label="Сортировка"
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value)}
-                >
-                  <option value="default">По умолчанию</option>
-                  <option value="low">Сначала дешевле</option>
-                  <option value="high">Сначала дороже</option>
-                </select>
-              </label>
-            </div>
-            <div className="results-heading">
-              <span>
-                Найдено: <b>{visible.length}</b>
-              </span>
-              <span>Цена за 1 шт. · ₽</span>
-            </div>
-            {catalogError && (
-              <p role="alert" className="notice">
-                {catalogError}
-              </p>
-            )}
-            {!products.length && !catalogError && <p>Загружаем каталог…</p>}
-            {products.length > 0 && !visible.length && (
-              <div className="empty-results">
-                <h3>По вашему запросу ничего не найдено</h3>
-                <button
-                  className="secondary"
-                  onClick={() => {
-                    setSearch("");
-                    setCategory("all");
-                  }}
-                >
-                  Сбросить поиск
-                </button>
+            <div className="page-heading">
+              <div>
+                <p className="eyebrow">ДЛЯ ГРУЗОВОГО ТРАНСПОРТА</p>
+                <h1>
+                  Шины и диски<span>.</span>
+                </h1>
               </div>
-            )}
-            <div className="products">
-              {visible.map((p) => (
-                <article className="product" key={p.id}>
-                  <div className="product-image">
-                    <span className="product-type">
-                      {p.name.startsWith("Диск") ? "ДИСК" : "ШИНА"}
-                    </span>
-                    <Wheel rim={p.name.startsWith("Диск")} />
-                  </div>
-                  <div className="product-body">
-                    <p className="category">
-                      {p.name.startsWith("Диск")
-                        ? "Грузовой диск"
-                        : "Грузовая шина"}
-                    </p>
-                    <h3>{productName(p.name)}</h3>
-                    <p className="price">
-                      {rub(p.unit_price_rub)} <small>/ шт.</small>
-                    </p>
-                    <div className="purchase-row">
-                      <QuantityControl
-                        value={quantities[p.id] || 1}
-                        disabled={locked}
-                        label={`Количество: ${productName(p.name)}`}
-                        onChange={(value) =>
-                          setQuantities((prev) => ({ ...prev, [p.id]: value }))
-                        }
-                      />
-                      <button
-                        className="add-button"
-                        disabled={locked}
-                        onClick={() => add(p, false)}
-                      >
-                        В корзину
-                      </button>
-                    </div>
-                    <button
-                      className="buy-now"
-                      disabled={locked}
-                      onClick={() => add(p, true)}
+              <p>
+                Выберите размер.
+                <br />
+                Остальное согласуем при звонке.
+              </p>
+            </div>
+            <div className="catalog-layout" id="catalog">
+              <aside className="filters" aria-label="Категории каталога">
+                <h2>Каталог</h2>
+                {[
+                  ["all", "Все товары"],
+                  ["tyres", "Грузовые шины"],
+                  ["rims", "Грузовые диски"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    className={
+                      category === value
+                        ? "category-link selected"
+                        : "category-link"
+                    }
+                    aria-pressed={category === value}
+                    onClick={() => setCategory(value)}
+                  >
+                    <span>{label}</span>
+                    <span aria-hidden="true">↗</span>
+                  </button>
+                ))}
+                <div className="selection-note">
+                  <span className="note-icon" aria-hidden="true">
+                    ↗
+                  </span>
+                  <h3>
+                    Нужна помощь
+                    <br />с выбором?
+                  </h3>
+                  <p>
+                    Добавьте вопрос в комментарий к заявке — разберём детали
+                    вместе.
+                  </p>
+                  <a href="#checkout">К оформлению →</a>
+                </div>
+              </aside>
+              <section className="catalog-results" aria-label="Товары">
+                <div className="catalog-toolbar">
+                  <label className="search">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      aria-hidden="true"
                     >
-                      Купить сейчас <span aria-hidden="true">↗</span>
+                      <circle cx="10" cy="10" r="7" />
+                      <path d="m15 15 6 6" />
+                    </svg>
+                    <input
+                      type="search"
+                      aria-label="Поиск по каталогу"
+                      placeholder="Название или размер, например 315/70"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </label>
+                  <label className="sort">
+                    <span>Сортировка</span>
+                    <select
+                      aria-label="Сортировка"
+                      value={sort}
+                      onChange={(e) => setSort(e.target.value)}
+                    >
+                      <option value="default">По умолчанию</option>
+                      <option value="low">Сначала дешевле</option>
+                      <option value="high">Сначала дороже</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="results-heading">
+                  <span>
+                    Найдено: <b>{visible.length}</b>
+                  </span>
+                  <span>Цена за 1 шт. · ₽</span>
+                </div>
+                {catalogError && (
+                  <p role="alert" className="notice">
+                    {catalogError}
+                  </p>
+                )}
+                {!products.length && !catalogError && <p>Загружаем каталог…</p>}
+                {products.length > 0 && !visible.length && (
+                  <div className="empty-results">
+                    <h3>По вашему запросу ничего не найдено</h3>
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        setSearch("");
+                        setCategory("all");
+                      }}
+                    >
+                      Сбросить поиск
                     </button>
                   </div>
-                </article>
-              ))}
+                )}
+                <div className="products">
+                  {visible.map((p) => (
+                    <article
+                      className="product"
+                      key={p.id}
+                      onClick={(e) => {
+                        if (
+                          !(e.target as HTMLElement).closest(
+                            "a,button,input,select,textarea,details,label",
+                          )
+                        )
+                          window.location.assign(`/products/${p.id}`);
+                      }}
+                    >
+                      <div className="product-image">
+                        <ProductPhotos
+                          images={p.images}
+                          name={p.name}
+                          href={`/products/${p.id}`}
+                          fallback={
+                            <Wheel
+                              rim={
+                                p.details?.kind === "wheel" ||
+                                p.name.startsWith("Диск")
+                              }
+                            />
+                          }
+                        />
+                      </div>
+                      <div className="product-body">
+                        <p className="category">
+                          {p.details?.kind === "wheel" ||
+                          p.name.startsWith("Диск")
+                            ? "Грузовой диск"
+                            : "Грузовая шина"}
+                        </p>
+                        <h3>
+                          <a href={`/products/${p.id}`}>
+                            {productName(p.name)}
+                          </a>
+                        </h3>
+                        <p className="price">
+                          {rub(p.unit_price_rub)}{" "}
+                          <small>/ {p.unit_label || "шт."}</small>
+                        </p>
+                        {p.details?.sku && (
+                          <p>
+                            {p.details.sku} · В наличии: {p.stock}{" "}
+                            {p.unit_label}
+                          </p>
+                        )}
+                        <ProductSpecifications details={p.details} />
+                        <div className="purchase-row">
+                          <QuantityControl
+                            value={quantities[p.id] || 1}
+                            disabled={locked}
+                            label={`Количество: ${productName(p.name)}`}
+                            onChange={(value) =>
+                              setQuantities((prev) => ({
+                                ...prev,
+                                [p.id]: value,
+                              }))
+                            }
+                          />
+                          <button
+                            className="add-button"
+                            disabled={locked}
+                            onClick={() => add(p, false)}
+                          >
+                            В корзину
+                          </button>
+                        </div>
+                        <button
+                          className="buy-now"
+                          disabled={locked}
+                          onClick={() => add(p, true)}
+                        >
+                          Купить сейчас <span aria-hidden="true">↗</span>
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
             </div>
-          </section>
-        </div>
+          </>
+        )}
         <section id="checkout" className="checkout">
           <div className="checkout-heading">
             <div>
@@ -646,12 +779,31 @@ function App() {
                   <ul className="basket">
                     {selected.map((l) => (
                       <li key={l.product_id}>
-                        <div className="basket-image">
-                          <Wheel rim={l.name.startsWith("Диск")} />
-                        </div>
+                        <a
+                          className="basket-image"
+                          href={`/products/${encodeURIComponent(l.product_id)}`}
+                          aria-label={`Открыть: ${l.name}`}
+                        >
+                          <BasketPhoto
+                            id={l.product_id}
+                            name={l.name}
+                            url={
+                              l.image_url ||
+                              products.find((p) => p.id === l.product_id)
+                                ?.images?.[0]?.url
+                            }
+                            fallback={<Wheel rim={l.name.startsWith("Диск")} />}
+                          />
+                        </a>
                         <div className="basket-description">
-                          <b>{productName(l.name)}</b>
-                          <span>{rub(l.unit_price_rub)} / шт.</span>
+                          <a
+                            href={`/products/${encodeURIComponent(l.product_id)}`}
+                          >
+                            <b>{productName(l.name)}</b>
+                          </a>
+                          <span>
+                            {rub(l.unit_price_rub)} / {l.unit_label || "шт."}
+                          </span>
                         </div>
                         <div className="basket-actions">
                           <QuantityControl
@@ -752,7 +904,7 @@ function App() {
                     {newPrices.map((l) => (
                       <p key={l.product_id}>
                         {productName(l.name)}: {l.quantity} ×{" "}
-                        {rub(l.unit_price_rub)}
+                        {rub(l.unit_price_rub)} / {l.unit_label || "шт."}
                       </p>
                     ))}
                     <strong>Итого: {rub(total(newPrices))}</strong>

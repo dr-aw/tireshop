@@ -2,11 +2,13 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json/v2"
 	"errors"
 	"net/http"
 	"regexp"
 	"strconv"
 	"time"
+	"tireshop/internal/catalogdata"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,10 +17,34 @@ import (
 var uuid = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 type productDTO struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	UnitPriceRub int64  `json:"unit_price_rub"`
-	Available    bool   `json:"available"`
+	ID           string              `json:"id"`
+	Name         string              `json:"name"`
+	UnitPriceRub int64               `json:"unit_price_rub"`
+	Available    bool                `json:"available"`
+	Stock        int64               `json:"stock"`
+	UnitLabel    string              `json:"unit_label"`
+	Details      catalogdata.Details `json:"details"`
+	Images       []catalogdata.Image `json:"images"`
+}
+
+var productColumns = `p.product_id::text,p.name,p.unit_price_rub,p.is_available,p.stock,` + catalogdata.Select("p") + `,
+ (SELECT coalesce(jsonb_agg(jsonb_build_object('url',webp_path,'width',width,'height',height) ORDER BY position),'[]'::jsonb) FROM catalog.product_images i WHERE i.product_id=p.product_id)`
+
+func readProduct(row pgx.Row) (productDTO, error) {
+	var p productDTO
+	var details, images []byte
+	err := row.Scan(&p.ID, &p.Name, &p.UnitPriceRub, &p.Available, &p.Stock, &details, &images)
+	if err != nil {
+		return p, err
+	}
+	if err = json.Unmarshal(details, &p.Details); err != nil {
+		return p, err
+	}
+	if err = json.Unmarshal(images, &p.Images); err != nil {
+		return p, err
+	}
+	p.UnitLabel = p.Details.UnitLabel()
+	return p, nil
 }
 
 // Catalog separates public reads from session-protected administration.
@@ -47,8 +73,8 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
-		rows, err := pool.Query(ctx, `SELECT product_id::text, name, unit_price_rub, is_available
-			FROM catalog.products WHERE is_available ORDER BY product_id LIMIT $1 OFFSET $2`, limit, offset)
+		rows, err := pool.Query(ctx, `SELECT `+productColumns+`
+			FROM catalog.products p WHERE is_available ORDER BY product_id LIMIT $1 OFFSET $2`, limit, offset)
 		if err != nil {
 			fail(w, 503, "unavailable", "Каталог временно недоступен")
 			return
@@ -56,11 +82,13 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 		defer rows.Close()
 		products := make([]productDTO, 0)
 		for rows.Next() {
-			var p productDTO
-			if err := rows.Scan(&p.ID, &p.Name, &p.UnitPriceRub, &p.Available); err != nil {
+			p, err := readProduct(rows)
+			if err != nil {
 				fail(w, 503, "unavailable", "Каталог временно недоступен")
 				return
 			}
+			p.Details.Location = ""
+			p.Details.ReviewNotes = ""
 			products = append(products, p)
 		}
 		if rows.Err() != nil {
@@ -79,9 +107,8 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
-		var p productDTO
-		err := pool.QueryRow(ctx, `SELECT product_id::text, name, unit_price_rub, is_available
-			FROM catalog.products WHERE product_id=$1::uuid`, id).Scan(&p.ID, &p.Name, &p.UnitPriceRub, &p.Available)
+		p, err := readProduct(pool.QueryRow(ctx, `SELECT `+productColumns+`
+			FROM catalog.products p WHERE product_id=$1::uuid`, id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			fail(w, 404, "not_found", "Товар не найден")
 			return
@@ -90,6 +117,8 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 			fail(w, 503, "unavailable", "Каталог временно недоступен")
 			return
 		}
+		p.Details.Location = ""
+		p.Details.ReviewNotes = ""
 		writeJSON(w, 200, p)
 	})
 	return secure(mux)

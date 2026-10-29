@@ -116,6 +116,7 @@ func Requests(pool *pgxpool.Pool, allowedOrigins []string) http.Handler {
 			writeJSON(w, 201, map[string]string{"request_id": result.RequestID, "message": "Заявка получена"})
 		case "price_changed":
 			type priceItem struct {
+				UnitLabel    string `json:"unit_label"`
 				ProductID    string `json:"product_id"`
 				Name         string `json:"name"`
 				Quantity     int64  `json:"quantity"`
@@ -123,7 +124,7 @@ func Requests(pool *pgxpool.Pool, allowedOrigins []string) http.Handler {
 			}
 			items := make([]priceItem, 0, len(result.Quote.Items))
 			for _, item := range result.Quote.Items {
-				items = append(items, priceItem{item.ProductID, item.Name, item.Quantity, item.UnitPriceRub})
+				items = append(items, priceItem{item.UnitLabel, item.ProductID, item.Name, item.Quantity, item.UnitPriceRub})
 			}
 			writeJSON(w, 409, struct {
 				Error    apiError    `json:"error"`

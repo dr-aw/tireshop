@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json/v2"
 	"net/http"
 	"os"
 	"strings"
@@ -9,17 +10,19 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"tireshop/internal/catalogdata"
 	"tireshop/internal/requests"
 	"tireshop/internal/requests/postgres"
 )
 
 type adminProduct struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	UnitPriceRub *int64 `json:"unit_price_rub"`
-	Available    *bool  `json:"available"`
-	Stock        *int64 `json:"stock"`
-	Version      int64  `json:"version"`
+	ID           string               `json:"id"`
+	Name         string               `json:"name"`
+	UnitPriceRub *int64               `json:"unit_price_rub"`
+	Available    *bool                `json:"available"`
+	Stock        *int64               `json:"stock"`
+	Version      int64                `json:"version"`
+	Details      *catalogdata.Details `json:"details,omitempty"`
 }
 
 // The catalog knows only the session introspection HTTP contract. The requests
@@ -67,7 +70,12 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 		if !ok {
 			return
 		}
-		rows, err := pool.Query(r.Context(), `SELECT product_id::text,name,unit_price_rub,is_available,stock,version FROM catalog.products ORDER BY product_id LIMIT 50 OFFSET $1`, offset)
+		kind := r.URL.Query().Get("kind")
+		if kind != "" && kind != "tyre" && kind != "wheel" {
+			fail(w, 400, "validation_error", "Некорректная категория")
+			return
+		}
+		rows, err := pool.Query(r.Context(), `SELECT product_id::text,name,unit_price_rub,is_available,stock,version,`+catalogdata.Select("p")+` FROM catalog.products p WHERE ($2 = '' OR kind = $2) ORDER BY product_id LIMIT 50 OFFSET $1`, offset, kind)
 		if err != nil {
 			adminError(w, err)
 			return
@@ -76,7 +84,12 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 		items := []adminProduct{}
 		for rows.Next() {
 			var p adminProduct
-			if err := rows.Scan(&p.ID, &p.Name, &p.UnitPriceRub, &p.Available, &p.Stock, &p.Version); err != nil {
+			var raw []byte
+			if err := rows.Scan(&p.ID, &p.Name, &p.UnitPriceRub, &p.Available, &p.Stock, &p.Version, &raw); err != nil {
+				adminError(w, err)
+				return
+			}
+			if err := json.Unmarshal(raw, &p.Details); err != nil {
 				adminError(w, err)
 				return
 			}
@@ -94,9 +107,37 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 			return
 		}
 		p.Name = strings.TrimSpace(p.Name)
+		if p.Details != nil && p.Details.Validate() != nil {
+			fail(w, 422, "validation_error", "Проверьте характеристики товара")
+			return
+		}
 		if utf8.RuneCountInString(p.Name) < 1 || utf8.RuneCountInString(p.Name) > 300 || p.UnitPriceRub == nil || *p.UnitPriceRub < 0 || *p.UnitPriceRub > requests.MaxAmount || p.Stock == nil || *p.Stock < 0 || *p.Stock > requests.MaxAmount || p.Available == nil {
 			fail(w, 422, "validation_error", "Укажите название, цену, целый остаток и доступность")
 			return
+		}
+		tx, err := pool.Begin(r.Context())
+		if err != nil {
+			adminError(w, err)
+			return
+		}
+		defer tx.Rollback(r.Context())
+		finish := func(id string) bool {
+			if p.Details != nil {
+				raw, e := json.Marshal(p.Details)
+				if e != nil {
+					adminError(w, e)
+					return false
+				}
+				if _, e = tx.Exec(r.Context(), catalogdata.UpdateSQL(), id, raw); e != nil {
+					adminError(w, e)
+					return false
+				}
+			}
+			if e := tx.Commit(r.Context()); e != nil {
+				adminError(w, e)
+				return false
+			}
+			return true
 		}
 		if r.Method == "POST" {
 			// The client supplies a UUID, so a retry cannot create another product.
@@ -104,7 +145,7 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 				fail(w, 422, "validation_error", "Нужен идентификатор товара")
 				return
 			}
-			tag, err := pool.Exec(r.Context(), `INSERT INTO catalog.products(product_id,name,unit_price_rub,is_available,stock) VALUES($1::uuid,$2,$3,$4,$5) ON CONFLICT(product_id) DO NOTHING`, p.ID, p.Name, *p.UnitPriceRub, *p.Available, *p.Stock)
+			tag, err := tx.Exec(r.Context(), `INSERT INTO catalog.products(product_id,name,unit_price_rub,is_available,stock) VALUES($1::uuid,$2,$3,$4,$5) ON CONFLICT(product_id) DO NOTHING`, p.ID, p.Name, *p.UnitPriceRub, *p.Available, *p.Stock)
 			if err != nil {
 				adminError(w, err)
 				return
@@ -114,6 +155,9 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 				return
 			}
 			p.Version = 1
+			if !finish(p.ID) {
+				return
+			}
 			writeJSON(w, 201, p)
 			return
 		}
@@ -122,7 +166,11 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 			fail(w, 422, "validation_error", "Проверьте идентификатор и версию")
 			return
 		}
-		tag, err := pool.Exec(r.Context(), `UPDATE catalog.products SET name=$2,unit_price_rub=$3,is_available=$4,stock=$5,version=version+1 WHERE product_id=$1::uuid AND version=$6`, id, p.Name, *p.UnitPriceRub, *p.Available, *p.Stock, p.Version)
+		var units any
+		if p.Details != nil {
+			units = p.Details.UnitsPerSale
+		}
+		tag, err := tx.Exec(r.Context(), `UPDATE catalog.products SET name=$2,unit_price_rub=$3,is_available=$4,stock=$5,version=version+1 WHERE product_id=$1::uuid AND version=$6 AND ($7::integer IS NULL OR units_per_sale=$7)`, id, p.Name, *p.UnitPriceRub, *p.Available, *p.Stock, p.Version, units)
 		if err != nil {
 			adminError(w, err)
 			return
@@ -133,6 +181,9 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 		}
 		p.ID = id
 		p.Version++
+		if !finish(id) {
+			return
+		}
 		writeJSON(w, 200, p)
 	})
 	mux.HandleFunc("POST /api/admin/products", save)

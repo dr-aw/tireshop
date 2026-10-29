@@ -31,6 +31,7 @@ type RequestedItem struct {
 // Product is the minimal catalog data needed to prepare a request.
 // Products are supplied by ID in PrepareQuote's map argument.
 type Product struct {
+	UnitLabel    string
 	Name         string
 	UnitPriceRub int64
 	Available    bool
@@ -38,6 +39,7 @@ type Product struct {
 
 // Item is a value snapshot, independent of subsequent changes to the catalog.
 type Item struct {
+	UnitLabel    string
 	ProductID    string
 	Name         string
 	Quantity     int64
@@ -89,6 +91,7 @@ func PrepareQuote(requested []RequestedItem, products map[string]Product) (Quote
 			return Quote{}, ErrAmountOverflow
 		}
 		quote.Items = append(quote.Items, Item{
+			UnitLabel: product.UnitLabel,
 			ProductID: input.ProductID, Name: product.Name,
 			Quantity: input.Quantity, UnitPriceRub: product.UnitPriceRub,
 			TotalRub: lineTotal,

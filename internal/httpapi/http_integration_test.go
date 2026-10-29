@@ -142,6 +142,15 @@ func TestBrowserLostResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 	const origin = "http://127.0.0.1:5174"
+	const bundleID = "00000000-0000-4000-8000-000000000091"
+	if _, err := catalog.Exec(t.Context(), `INSERT INTO catalog.products(product_id,name,unit_price_rub,stock,sku,kind,units_per_sale,description) VALUES($1,'Browser wheel bundle',25000,1,'BROWSER-SET','wheel',2,'Synthetic gallery fixture')`, bundleID); err != nil {
+		t.Fatal(err)
+	}
+	for i, hash := range []string{strings.Repeat("e", 64), strings.Repeat("f", 64)} {
+		if _, err := catalog.Exec(t.Context(), `INSERT INTO catalog.product_images(product_id,position,source_path,source_sha256,webp_path,width,height) VALUES($1,$2,'synthetic.jpg',$3,$4,1280,1280)`, bundleID, i, hash, fmt.Sprintf("/media/test-%d-1280-v1.webp", i)); err != nil {
+			t.Fatal(err)
+		}
+	}
 	t.Setenv("ADMIN_LOCAL_HTTP", "1")
 	provisionTestAdmin(t, adminDB(t), "browser-admin")
 	rs := httptest.NewServer(Requests(requests, []string{origin}))
@@ -209,6 +218,11 @@ func TestBrowserLostResponse(t *testing.T) {
 		t.Fatalf("browser test: %v\n%s", err, output.String())
 	}
 	t.Log(output.String())
+	var unit string
+	var bundleTotal int64
+	if err := requests.QueryRow(t.Context(), `SELECT i.unit_label,r.total_rub FROM requests.request_items i JOIN requests.requests r USING(request_id) WHERE r.customer_name='Browser Bundle Buyer'`).Scan(&unit, &bundleTotal); err != nil || unit != "комплект (2 шт.)" || bundleTotal != 25000 {
+		t.Fatalf("bundle snapshot: %q %d %v", unit, bundleTotal, err)
+	}
 	var n int
 	if err := requests.QueryRow(t.Context(), `SELECT count(*) FROM requests.requests WHERE customer_name='Browser Buyer'`).Scan(&n); err != nil || n != 1 {
 		t.Fatalf("browser retry duplicated/lost submission: n=%d err=%v", n, err)

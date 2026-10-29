@@ -56,23 +56,23 @@ func TestInvalidQuoteNeverReturnsPartialBasket(t *testing.T) {
 		{"empty", nil, Product{}, ErrInvalidItems},
 		{"blank ID", []RequestedItem{{" ", 1, 10}}, Product{}, ErrInvalidItems},
 		{"unknown", []RequestedItem{{"unknown", 1, 10}}, Product{}, ErrInvalidItems},
-		{"duplicate", []RequestedItem{{"p", 1, 10}, {"p", 1, 10}}, Product{"P", 10, true}, ErrInvalidItems},
-		{"zero quantity", []RequestedItem{{"p", 0, 10}}, Product{"P", 10, true}, ErrInvalidItems},
-		{"negative quantity", []RequestedItem{{"p", -1, 10}}, Product{"P", 10, true}, ErrInvalidItems},
-		{"unsafe quantity", []RequestedItem{{"p", math.MaxInt64, 10}}, Product{"P", 10, true}, ErrInvalidItems},
-		{"negative expected price", []RequestedItem{{"p", 1, -1}}, Product{"P", 10, true}, ErrInvalidItems},
-		{"unsafe expected price", []RequestedItem{{"p", 1, MaxAmount + 1}}, Product{"P", 10, true}, ErrInvalidItems},
-		{"unavailable", []RequestedItem{{"p", 1, 10}}, Product{"P", 10, false}, ErrProductUnavailable},
-		{"negative price", []RequestedItem{{"p", 1, 10}}, Product{"P", -1, true}, ErrInvalidProduct},
-		{"unsafe price", []RequestedItem{{"p", 1, 10}}, Product{"P", math.MaxInt64, true}, ErrInvalidProduct},
-		{"blank name", []RequestedItem{{"p", 1, 10}}, Product{" ", 10, true}, ErrInvalidProduct},
-		{"multiply overflow", []RequestedItem{{"p", MaxAmount, MaxAmount}}, Product{"P", MaxAmount, true}, ErrAmountOverflow},
-		{"sum overflow", []RequestedItem{{"p", 1, MaxAmount}, {"q", 1, 1}}, Product{"P", MaxAmount, true}, ErrAmountOverflow},
-		{"late unavailable", []RequestedItem{{"q", 1, 1}, {"p", 1, 10}}, Product{"P", 10, false}, ErrProductUnavailable},
+		{"duplicate", []RequestedItem{{"p", 1, 10}, {"p", 1, 10}}, Product{Name: "P", UnitPriceRub: 10, Available: true}, ErrInvalidItems},
+		{"zero quantity", []RequestedItem{{"p", 0, 10}}, Product{Name: "P", UnitPriceRub: 10, Available: true}, ErrInvalidItems},
+		{"negative quantity", []RequestedItem{{"p", -1, 10}}, Product{Name: "P", UnitPriceRub: 10, Available: true}, ErrInvalidItems},
+		{"unsafe quantity", []RequestedItem{{"p", math.MaxInt64, 10}}, Product{Name: "P", UnitPriceRub: 10, Available: true}, ErrInvalidItems},
+		{"negative expected price", []RequestedItem{{"p", 1, -1}}, Product{Name: "P", UnitPriceRub: 10, Available: true}, ErrInvalidItems},
+		{"unsafe expected price", []RequestedItem{{"p", 1, MaxAmount + 1}}, Product{Name: "P", UnitPriceRub: 10, Available: true}, ErrInvalidItems},
+		{"unavailable", []RequestedItem{{"p", 1, 10}}, Product{Name: "P", UnitPriceRub: 10, Available: false}, ErrProductUnavailable},
+		{"negative price", []RequestedItem{{"p", 1, 10}}, Product{Name: "P", UnitPriceRub: -1, Available: true}, ErrInvalidProduct},
+		{"unsafe price", []RequestedItem{{"p", 1, 10}}, Product{Name: "P", UnitPriceRub: math.MaxInt64, Available: true}, ErrInvalidProduct},
+		{"blank name", []RequestedItem{{"p", 1, 10}}, Product{Name: " ", UnitPriceRub: 10, Available: true}, ErrInvalidProduct},
+		{"multiply overflow", []RequestedItem{{"p", MaxAmount, MaxAmount}}, Product{Name: "P", UnitPriceRub: MaxAmount, Available: true}, ErrAmountOverflow},
+		{"sum overflow", []RequestedItem{{"p", 1, MaxAmount}, {"q", 1, 1}}, Product{Name: "P", UnitPriceRub: MaxAmount, Available: true}, ErrAmountOverflow},
+		{"late unavailable", []RequestedItem{{"q", 1, 1}, {"p", 1, 10}}, Product{Name: "P", UnitPriceRub: 10, Available: false}, ErrProductUnavailable},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			quote, err := PrepareQuote(tt.items, map[string]Product{"p": tt.product, "q": {"Q", 1, true}})
+			quote, err := PrepareQuote(tt.items, map[string]Product{"p": tt.product, "q": {Name: "Q", UnitPriceRub: 1, Available: true}})
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("got %v, want %v", err, tt.wantErr)
 			}
@@ -84,7 +84,7 @@ func TestInvalidQuoteNeverReturnsPartialBasket(t *testing.T) {
 }
 
 func TestQuoteExactAmountBoundary(t *testing.T) {
-	quote, err := PrepareQuote([]RequestedItem{{"p", 1, MaxAmount}}, map[string]Product{"p": {"P", MaxAmount, true}})
+	quote, err := PrepareQuote([]RequestedItem{{"p", 1, MaxAmount}}, map[string]Product{"p": {Name: "P", UnitPriceRub: MaxAmount, Available: true}})
 	if err != nil || quote.TotalRub != MaxAmount {
 		t.Fatalf("quote=%+v, err=%v", quote, err)
 	}

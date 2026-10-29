@@ -17,6 +17,7 @@ var ErrVersion = errors.New("stale version")
 var ErrStock = errors.New("insufficient stock")
 
 type AdminItem struct {
+	UnitLabel    string `json:"unit_label"`
 	ProductID    string `json:"product_id"`
 	Name         string `json:"name"`
 	Quantity     int64  `json:"quantity"`
@@ -71,14 +72,14 @@ func loadAdmin(ctx context.Context, tx pgx.Tx, id string, lock bool) (AdminReque
 	if err != nil {
 		return v, err
 	}
-	rows, err := tx.Query(ctx, `SELECT product_id::text,name,quantity,unit_price_rub FROM requests.request_items WHERE request_id=$1::uuid ORDER BY product_id`, id)
+	rows, err := tx.Query(ctx, `SELECT product_id::text,name,quantity,unit_price_rub,unit_label FROM requests.request_items WHERE request_id=$1::uuid ORDER BY product_id`, id)
 	if err != nil {
 		return v, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var item AdminItem
-		if err := rows.Scan(&item.ProductID, &item.Name, &item.Quantity, &item.UnitPriceRub); err != nil {
+		if err := rows.Scan(&item.ProductID, &item.Name, &item.Quantity, &item.UnitPriceRub, &item.UnitLabel); err != nil {
 			return v, err
 		}
 		v.Items = append(v.Items, item)
@@ -177,7 +178,7 @@ func (s *Store) AdminEdit(ctx context.Context, id, actor string, in AdminEdit) (
 			item, exists := old[id]
 			if !exists {
 				item.ProductID = id
-				err = tx.QueryRow(ctx, `SELECT name,unit_price_rub FROM catalog.request_products_v1 WHERE product_id=$1::uuid AND is_available`, id).Scan(&item.Name, &item.UnitPriceRub)
+				err = tx.QueryRow(ctx, `SELECT name,unit_price_rub,unit_label FROM catalog.request_products_v1 WHERE product_id=$1::uuid AND is_available`, id).Scan(&item.Name, &item.UnitPriceRub, &item.UnitLabel)
 				if errors.Is(err, pgx.ErrNoRows) {
 					return before, ErrInvalidSubmission
 				}
@@ -198,7 +199,7 @@ func (s *Store) AdminEdit(ctx context.Context, id, actor string, in AdminEdit) (
 			return before, err
 		}
 		for _, item := range items {
-			if _, err = tx.Exec(ctx, `INSERT INTO requests.request_items(request_id,product_id,name,quantity,unit_price_rub,total_rub) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6)`, id, item.ProductID, item.Name, item.Quantity, item.UnitPriceRub, item.Quantity*item.UnitPriceRub); err != nil {
+			if _, err = tx.Exec(ctx, `INSERT INTO requests.request_items(request_id,product_id,name,quantity,unit_price_rub,total_rub,unit_label) VALUES($1::uuid,$2::uuid,$3,$4,$5,$6,$7)`, id, item.ProductID, item.Name, item.Quantity, item.UnitPriceRub, item.Quantity*item.UnitPriceRub, item.UnitLabel); err != nil {
 				return before, err
 			}
 		}
