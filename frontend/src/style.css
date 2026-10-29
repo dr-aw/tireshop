@@ -1182,6 +1182,10 @@ footer {
 }
 .catalog-photo-controls button {
   position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 1;
   top: 50%;
   transform: translateY(-50%);
   width: 34px;
@@ -1193,6 +1197,12 @@ footer {
   color: #343a43;
   font-size: 24px;
   z-index: 2;
+}
+.catalog-photo-controls button svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+  pointer-events: none;
 }
 .catalog-photo-controls button:first-child {
   left: 8px;

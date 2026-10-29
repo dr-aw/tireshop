@@ -523,9 +523,21 @@ export function Administrator() {
                   });
                 }}
               >
-                <h2>
-                  {product.version ? "Редактирование товара" : "Новый товар"}
-                </h2>
+                <div className="admin-editor-heading">
+                  <h2>
+                    {product.version ? "Редактирование товара" : "Новый товар"}
+                  </h2>
+                  {product.version > 0 && (
+                    <a
+                      className="admin-card-link"
+                      href={`/products/${product.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Карточка товара <span aria-hidden="true">↗</span>
+                    </a>
+                  )}
+                </div>
                 <fieldset disabled={busy}>
                   <label>
                     Название
@@ -674,7 +686,14 @@ function RequestEditor({
           {items.map((item) => (
             <div className="admin-line" key={item.product_id}>
               <div>
-                {item.name}
+                <a
+                  className="admin-product-link"
+                  href={`/products/${item.product_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {item.name}
+                </a>
                 <small>
                   {money(item.unit_price_rub)} / {item.unit_label || "шт."}
                 </small>
@@ -835,8 +854,16 @@ function RequestEditor({
                   <ul>
                     {snapshot.items.map((item) => (
                       <li key={item.product_id}>
-                        {item.name} — {item.quantity} {item.unit_label || "шт."}{" "}
-                        × {money(item.unit_price_rub)}
+                        <a
+                          className="admin-product-link"
+                          href={`/products/${item.product_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {item.name}
+                        </a>{" "}
+                        — {item.quantity} {item.unit_label || "шт."} ×{" "}
+                        {money(item.unit_price_rub)}
                       </li>
                     ))}
                   </ul>

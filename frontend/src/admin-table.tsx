@@ -154,7 +154,13 @@ export function TableCells({
         if (key === "name")
           content = (
             <div className="admin-product-name">
-              <span className="admin-thumbnail">
+              <a
+                className="admin-thumbnail"
+                href={`/products/${p.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Открыть карточку: ${p.name}`}
+              >
                 <BasketPhoto
                   id={p.id}
                   name={p.name}
@@ -162,10 +168,17 @@ export function TableCells({
                   lookup={false}
                   fallback={<span aria-hidden="true">◇</span>}
                 />
-              </span>
+              </a>
               <div>
-                {p.name}
-                <small>{p.details?.sku}</small>
+                <a
+                  className="admin-product-link"
+                  href={`/products/${p.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {p.name}
+                  <small>{p.details?.sku}</small>
+                </a>
                 {p.details?.review_notes && (
                   <small>{p.details.review_notes}</small>
                 )}
