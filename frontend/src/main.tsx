@@ -4,6 +4,7 @@ import "./style.css";
 import { Administrator } from "./administrator";
 import { ProductPage } from "./product-page";
 import { BasketPhoto } from "./basket-photo";
+import { OrderSteps } from "./order-steps";
 import {
   ProductPhotos,
   ProductSpecifications,
@@ -946,24 +947,7 @@ function App() {
             </div>
           )}
         </section>
-        <section className="how-to-order" id="how-to-order">
-          <h2>От выбора до заказа</h2>
-          <div>
-            <span>01</span>
-            <h3>Соберите корзину</h3>
-            <p>Выберите товары и нужное количество.</p>
-          </div>
-          <div>
-            <span>02</span>
-            <h3>Оставьте контакты</h3>
-            <p>Имя, телефон и пожелания к заказу.</p>
-          </div>
-          <div>
-            <span>03</span>
-            <h3>Дождитесь звонка</h3>
-            <p>Подтвердим наличие и обсудим доставку.</p>
-          </div>
-        </section>
+        <OrderSteps />
       </main>
       <footer>
         <div className="wrap footer-inner">

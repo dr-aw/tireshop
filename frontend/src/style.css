@@ -709,30 +709,99 @@ form button {
   background: #f5f5f6;
 }
 .how-to-order {
-  display: grid;
-  grid-template-columns: 220px repeat(3, 1fr);
-  gap: 32px;
   border-top: 1px solid var(--line);
   margin-top: 60px;
-  padding: 36px 0 54px;
+  padding: 40px 0 54px;
+}
+.order-steps-heading {
+  margin-bottom: 28px;
+}
+.order-steps-heading .eyebrow {
+  margin: 0 0 8px;
 }
 .how-to-order h2 {
-  font-size: 22px;
+  font-size: clamp(24px, 3vw, 32px);
+  margin: 0;
+  letter-spacing: -0.8px;
 }
-.how-to-order div > span {
+.how-to-order h2 span {
   color: var(--red);
-  font-size: 12px;
-  display: block;
-  margin-bottom: 12px;
+}
+.order-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.order-step {
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fff, #f7f8fa);
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.order-step-visual {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.order-step-visual::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+.order-step-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--red);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.order-step-icon svg {
+  width: 32px;
+  height: 32px;
+}
+.order-step-number {
+  order: 1;
+  color: #91969e;
+  font-size: 13px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 .how-to-order h3 {
-  font-size: 14px;
+  font-size: 18px;
+  margin: 0;
 }
-.how-to-order p {
-  font-size: 12px;
+.order-step p {
+  font-size: 14px;
   color: var(--muted);
   margin: 8px 0 0;
+  max-width: 28ch;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .order-step:hover {
+    transform: translateY(-4px);
+    border-color: #edc6c8;
+    box-shadow: 0 10px 24px #1a1a1a08;
+  }
+  .order-step:hover .order-step-icon {
+    background: #fff1f1;
+    border-color: #f4d6d7;
+  }
 }
 footer {
   border-top: 1px solid var(--line);
@@ -781,10 +850,6 @@ footer {
   }
   .add-button {
     min-width: 85px;
-  }
-  .how-to-order {
-    grid-template-columns: 180px repeat(3, 1fr);
-    gap: 24px;
   }
   .checkout-content {
     gap: 28px;
@@ -854,12 +919,6 @@ footer {
   }
   .remove {
     grid-column: auto;
-  }
-  .how-to-order {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .how-to-order h2 {
-    grid-column: 1/-1;
   }
 }
 @media (max-width: 640px) {
@@ -1043,24 +1102,32 @@ footer {
   }
   .how-to-order {
     margin-top: 36px;
+    padding: 28px 0 36px;
+  }
+  .order-steps-heading {
+    margin-bottom: 20px;
+  }
+  .order-steps {
     grid-template-columns: 1fr;
-    padding-bottom: 36px;
-    gap: 22px;
+    gap: 12px;
   }
-  .how-to-order h2 {
-    grid-column: auto;
+  .order-step {
+    padding: 20px;
   }
-  .how-to-order div {
-    padding-left: 36px;
-    position: relative;
+  .order-step-visual {
+    margin-bottom: 16px;
   }
-  .how-to-order div > span {
-    position: absolute;
-    left: 0;
-    top: 2px;
+  .order-step-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
   }
-  .how-to-order p {
-    margin-top: 4px;
+  .order-step-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+  .order-step p {
+    max-width: none;
   }
   .footer-inner {
     flex-wrap: wrap;
