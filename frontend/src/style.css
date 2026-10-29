@@ -201,6 +201,14 @@ h3 {
   gap: 32px;
   align-items: start;
 }
+@media (min-width: 901px) {
+  .catalog-layout > .filters {
+    position: sticky;
+    top: 106px;
+    max-height: calc(100dvh - 126px);
+    overflow-y: auto;
+  }
+}
 .filters h2 {
   font-size: 16px;
   margin: 14px 0 20px;
