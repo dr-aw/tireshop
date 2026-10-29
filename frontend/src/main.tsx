@@ -173,6 +173,7 @@ function Wheel({ rim = false }: { rim?: boolean }) {
 }
 
 function App() {
+  const isHomePage = window.location.pathname === "/";
   const productID = /^\/products\/([0-9a-f-]{36})\/?$/i.exec(
     window.location.pathname,
   )?.[1];
@@ -484,7 +485,7 @@ function App() {
             <small>ГРУЗОВЫЕ ШИНЫ И ДИСКИ</small>
           </a>
           <nav aria-label="Главное меню">
-            <a className="active" href="#catalog">
+            <a className="active" href="/#catalog">
               Каталог
             </a>
             <a href="#how-to-order">Как заказать</a>
@@ -955,7 +956,7 @@ function App() {
             tire<span>shop</span>
           </a>
           <span>Грузовые шины и диски</span>
-          <a href="#catalog">Каталог ↑</a>
+          {isHomePage && <a href="#catalog">Каталог ↑</a>}
         </div>
       </footer>
     </>
