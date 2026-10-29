@@ -1510,11 +1510,25 @@ footer {
   gap: 8px;
 }
 .catalog-search-form .search {
+  display: flex;
+  margin: 0;
   flex: 1;
   min-width: 0;
 }
 .catalog-search-form .search input {
   min-width: 0;
+  width: 100%;
+}
+.catalog-search-button {
+  width: auto;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+}
+.catalog-search-button svg {
+  display: none;
 }
 .catalog-pagination {
   display: flex;
@@ -1527,6 +1541,17 @@ footer {
 @media (max-width: 640px) {
   .catalog-search-form {
     width: 100%;
+  }
+  .catalog-search-button {
+    width: 44px;
+    padding: 10px;
+  }
+  .catalog-search-button span,
+  .catalog-search-form .search > svg {
+    display: none;
+  }
+  .catalog-search-button svg {
+    display: block;
   }
   .catalog-pagination {
     gap: 8px;

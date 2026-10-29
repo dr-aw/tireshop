@@ -609,8 +609,25 @@ function App() {
                         onChange={(e) => setSearch(e.target.value)}
                       />
                     </label>
-                    <button type="submit" className="secondary">
-                      Найти
+                    <button
+                      type="submit"
+                      className="catalog-search-button"
+                      aria-label="Найти"
+                    >
+                      <span>Найти</span>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="10" cy="10" r="7" />
+                        <path d="m15 15 6 6" />
+                      </svg>
                     </button>
                   </form>
                   <label className="sort">
