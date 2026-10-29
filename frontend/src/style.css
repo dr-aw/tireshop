@@ -1309,15 +1309,52 @@ footer {
   margin: 0;
 }
 .product-page-specifications {
-  max-width: 850px;
+  width: 100%;
 }
-.product-page-specifications .catalog-specs {
+.product-page-details-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+  margin-top: 24px;
+}
+.product-specification-table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 15px;
 }
-.product-page-specifications .catalog-specs p {
-  max-height: none;
+.product-specification-table th,
+.product-specification-table td {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.product-specification-table th {
+  width: 48%;
+  padding-right: 18px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.product-description {
+  min-width: 0;
+}
+.product-description h3 {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+.product-description p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
 }
 @media (max-width: 700px) {
+  .product-page-details-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
   .product-page-grid {
     grid-template-columns: 1fr;
     gap: 24px;

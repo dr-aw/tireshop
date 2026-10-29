@@ -1,6 +1,6 @@
 import {
   ProductPhotos,
-  ProductSpecifications,
+  detailLabels,
   type CatalogDetails,
 } from "./catalog-details";
 type Product = {
@@ -108,7 +108,33 @@ export function ProductPage({
       </div>
       <div className="product-page-specifications">
         <h2>Характеристики и описание</h2>
-        <ProductSpecifications details={p.details} />
+        <div className="product-page-details-grid">
+          <table
+            className="product-specification-table"
+            aria-label="Характеристики товара"
+          >
+            <tbody>
+              {p.details &&
+                detailLabels
+                  .filter(
+                    ([key]) =>
+                      key !== "location" &&
+                      p.details![key] !== null &&
+                      p.details![key] !== "",
+                  )
+                  .map(([key, label]) => (
+                    <tr key={key}>
+                      <th scope="row">{label}</th>
+                      <td>{p.details![key]}</td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+          <section className="product-description">
+            <h3>Описание товара</h3>
+            <p>{p.details?.description || "Описание пока не добавлено."}</p>
+          </section>
+        </div>
       </div>
     </section>
   );
