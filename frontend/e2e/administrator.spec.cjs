@@ -105,7 +105,15 @@ test("administrator edits stock and request, dispatches once and retains history
   await added.getByRole("button", { name: "Изменить" }).click();
   await page.getByLabel("Показывать на витрине").uncheck();
   await page.getByRole("button", { name: "Сохранить товар" }).click();
-  await expect(added).toContainText("Скрыт");
+  await expect(added).toHaveCount(0);
+  const filters = page.locator(".admin-filter-panel");
+  await filters.getByLabel("Показать скрытые товары").check();
+  await filters.getByRole("button", { name: "Применить", exact: true }).click();
+  await expect(added).toHaveClass(/admin-hidden-product/);
+  await expect(added.locator("td").first()).toHaveCSS(
+    "background-color",
+    "rgb(240, 241, 243)",
+  );
   const publicList = await (
     await request.get("/api/products?limit=100")
   ).json();
@@ -152,6 +160,43 @@ test("administrator edits stock and request, dispatches once and retains history
     "background-color",
     "rgb(255, 241, 242)",
   );
+  await page.getByRole("button", { name: "Шины", exact: true }).click();
+  const picker = page.locator(".admin-column-picker");
+  if (!(await picker.evaluate((el) => el.open)))
+    await picker.locator("summary").click();
+  await expect(
+    picker.getByRole("checkbox", { name: "Вылет ET, мм", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    picker.getByRole("checkbox", { name: "Бренд", exact: true }),
+  ).not.toBeChecked();
+  if (!(await picker.evaluate((el) => el.open)))
+    await picker.locator("summary").click();
+  await picker
+    .getByRole("checkbox", { name: "Ширина шины", exact: true })
+    .check();
+  await page.getByRole("button", { name: "Диски", exact: true }).click();
+  await expect(
+    picker.getByRole("checkbox", { name: "Ширина шины", exact: true }),
+  ).toHaveCount(0);
+  await picker
+    .getByRole("checkbox", { name: "Вылет ET, мм", exact: true })
+    .check();
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Каталог и остатки", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Шины", exact: true }).click();
+  await expect(
+    page.getByRole("columnheader").filter({ hasText: "Ширина шины" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader").filter({ hasText: "Вылет ET" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Диски", exact: true }).click();
+  await expect(
+    page.getByRole("columnheader").filter({ hasText: "Вылет ET" }),
+  ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
     path: ".tmp/administrator-mobile.png",

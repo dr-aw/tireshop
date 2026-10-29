@@ -424,3 +424,14 @@
   color: var(--muted);
   font-size: 13px;
 }
+
+.administrator tr.admin-hidden-product td {
+  background: #f0f1f3;
+  color: #646b74;
+}
+.administrator tr.admin-hidden-product .admin-product-link {
+  color: #646b74;
+}
+.administrator tr.admin-hidden-product .admin-thumbnail {
+  filter: grayscale(1);
+}

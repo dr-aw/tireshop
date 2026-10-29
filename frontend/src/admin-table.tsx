@@ -11,7 +11,7 @@ export type TableSettings = {
   direction: "asc" | "desc";
 };
 export const defaultSettings = (): TableSettings => ({
-  columns: ["name", "unit_price_rub", "stock", "is_available"],
+  columns: ["name", "unit_price_rub", "stock"],
   sort: "",
   direction: "asc",
 });
@@ -26,43 +26,77 @@ export const columns = [
   { key: "description", label: "Описание" },
   { key: "review_notes", label: "Замечания" },
 ];
-export function readSettings(user: string): TableSettings {
+export function categoryColumns(kind: string) {
+  const tyre = [
+    "season",
+    "tread_percent",
+    "load_index",
+    "speed_index",
+    "tyre_width",
+    "aspect_ratio",
+    "rim_diameter",
+  ];
+  const wheel = [
+    "diameter",
+    "width",
+    "wheel_offset",
+    "pcd",
+    "wheel_type",
+    "center_bore",
+  ];
+  return columns.filter(
+    (c) =>
+      !(kind === "tyre" ? wheel : kind === "wheel" ? tyre : []).includes(c.key),
+  );
+}
+export function readSettings(user: string, kind = ""): TableSettings {
   try {
     const v = JSON.parse(
-      localStorage.getItem(`tireshop.admin.table.v1:${user}`) || "null",
+      localStorage.getItem(
+        `tireshop.admin.table.v2:${user}:${kind || "all"}`,
+      ) ||
+        (kind === ""
+          ? localStorage.getItem(`tireshop.admin.table.v1:${user}`)
+          : null) ||
+        "null",
     );
     if (!v) return defaultSettings();
-    const selected = columns
+    const selected = categoryColumns(kind)
       .filter((c) => Array.isArray(v.columns) && v.columns.includes(c.key))
       .map((c) => c.key);
     return {
       columns: ["name", ...selected.filter((c) => c !== "name")],
-      sort: columns.some((c) => c.key === v.sort) ? v.sort : "",
+      sort: categoryColumns(kind).some((c) => c.key === v.sort) ? v.sort : "",
       direction: v.direction === "desc" ? "desc" : "asc",
     };
   } catch {
     return defaultSettings();
   }
 }
-export function saveSettings(user: string, value: TableSettings) {
+export function saveSettings(user: string, value: TableSettings, kind = "") {
   localStorage.setItem(
-    `tireshop.admin.table.v1:${user}`,
+    `tireshop.admin.table.v2:${user}:${kind || "all"}`,
     JSON.stringify(value),
   );
 }
 export function ColumnPicker({
+  kind,
   settings,
   change,
 }: {
+  kind: string;
   settings: TableSettings;
   change: (s: TableSettings) => void;
 }) {
   return (
     <details className="admin-column-picker">
-      <summary>Столбцы таблицы</summary>
+      <summary>
+        Столбцы таблицы ·{" "}
+        {kind === "tyre" ? "Шины" : kind === "wheel" ? "Диски" : "Все товары"}
+      </summary>
       <p>Настройки сохраняются для вашего логина в этом браузере.</p>
       <div>
-        {columns.map((c) => (
+        {categoryColumns(kind).map((c) => (
           <label key={c.key}>
             <input
               type="checkbox"

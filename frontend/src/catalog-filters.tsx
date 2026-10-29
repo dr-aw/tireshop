@@ -199,13 +199,14 @@ export function CatalogFilters({
           {kind === "tyre" && range("tread", "Протектор, %", 100, "any")}
           {admin && range("stock", "Запас, ед.", 1000000000)}
           {admin && (
-            <label>
-              Публикация
-              <select name="visibility" defaultValue={values.visibility || ""}>
-                <option value="">Все</option>
-                <option value="visible">Опубликованные</option>
-                <option value="hidden">Скрытые</option>
-              </select>
+            <label className="filter-checkbox">
+              <input
+                type="checkbox"
+                name="visibility"
+                value="all"
+                defaultChecked={values.visibility === "all"}
+              />
+              Показать скрытые товары
             </label>
           )}
           <label className="filter-checkbox">

@@ -118,11 +118,15 @@ export function Administrator() {
   const [settingsByUser, setSettingsByUser] = useState<
     Record<string, TableSettings>
   >({});
-  const settings = settingsByUser[user || ""] || readSettings(user || "");
+  const settingsKey = JSON.stringify([user, kind]);
+  const settingsFor = (category: string) =>
+    settingsByUser[JSON.stringify([user, category])] ||
+    readSettings(user || "", category);
+  const settings = settingsFor(kind);
   function changeSettings(next: TableSettings) {
-    setSettingsByUser((old) => ({ ...old, [user!]: next }));
+    setSettingsByUser((old) => ({ ...old, [settingsKey]: next }));
     try {
-      saveSettings(user!, next);
+      saveSettings(user!, next, kind);
     } catch {
       setError("Не удалось сохранить настройки таблицы в браузере");
     }
@@ -167,6 +171,7 @@ export function Administrator() {
       const params = new URLSearchParams({
         ...filters,
         kind: category,
+        visibility: filters.visibility === "all" ? "" : "visible",
         offset: String(start),
         sort: order.sort,
         direction: order.direction,
@@ -384,7 +389,13 @@ export function Administrator() {
                     onClick={() =>
                       void run(async () => {
                         const next = changeKind(productFilters, value);
-                        await load("products", 0, value, settings, next);
+                        await load(
+                          "products",
+                          0,
+                          value,
+                          settingsFor(value),
+                          next,
+                        );
                         setProductFilters(next);
                         setKind(value);
                       })
@@ -409,7 +420,11 @@ export function Administrator() {
                   }
                 />
                 <p className="admin-result-count">Найдено: {productTotal}</p>
-                <ColumnPicker settings={settings} change={changeSettings} />
+                <ColumnPicker
+                  kind={kind}
+                  settings={settings}
+                  change={changeSettings}
+                />
               </>
             )}
             <div
@@ -482,7 +497,11 @@ export function Administrator() {
                         <tr
                           key={p.id}
                           className={
-                            p.stock === 0 ? "admin-zero-stock" : undefined
+                            !p.available
+                              ? "admin-hidden-product"
+                              : p.stock === 0
+                                ? "admin-zero-stock"
+                                : undefined
                           }
                         >
                           <TableCells product={p} settings={settings} />
