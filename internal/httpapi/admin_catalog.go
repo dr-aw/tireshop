@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json/v2"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -67,40 +68,20 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 		}
 	}
 	mux.HandleFunc("GET /api/admin/products", protect(func(w http.ResponseWriter, r *http.Request) {
-		offset, ok := pageOffset(w, r)
-		if !ok {
+
+		query, err := parseCatalogQuery(r.URL.Query(), true)
+		if err != nil {
+			fail(w, 400, "validation_error", err.Error())
 			return
 		}
-		kind := r.URL.Query().Get("kind")
-		if kind != "" && kind != "tyre" && kind != "wheel" {
-			fail(w, 400, "validation_error", "Некорректная категория")
+		var total int
+		if err = pool.QueryRow(r.Context(), "SELECT count(*) FROM catalog.products p WHERE "+query.Where, query.Args...).Scan(&total); err != nil {
+			adminError(w, err)
 			return
 		}
-		field := r.URL.Query().Get("sort")
-		direction := r.URL.Query().Get("direction")
-		allowed := map[string]bool{"name": true, "unit_price_rub": true, "stock": true, "is_available": true}
-		for _, key := range catalogdata.Fields {
-			allowed[key] = true
-		}
-		order := "p.product_id"
-		if field != "" {
-			if !allowed[field] {
-				fail(w, 400, "validation_error", "Неизвестное поле сортировки")
-				return
-			}
-			order = "p." + field
-		}
-		if direction != "" && direction != "asc" && direction != "desc" {
-			fail(w, 400, "validation_error", "Некорректный порядок сортировки")
-			return
-		}
-		if direction == "desc" {
-			order += " DESC"
-		} else {
-			order += " ASC"
-		}
-		order += " NULLS LAST, p.product_id ASC"
-		rows, err := pool.Query(r.Context(), `SELECT product_id::text,name,unit_price_rub,is_available,stock,version,`+catalogdata.Select("p")+`,coalesce((SELECT webp_path FROM catalog.product_images i WHERE i.product_id=p.product_id ORDER BY position LIMIT 1),'') FROM catalog.products p WHERE ($2 = '' OR kind = $2) ORDER BY `+order+` LIMIT 50 OFFSET $1`, offset, kind)
+		args := append(query.Args, query.Limit, query.Offset)
+		rows, err := pool.Query(r.Context(), "SELECT product_id::text,name,unit_price_rub,is_available,stock,version,"+catalogdata.Select("p")+",coalesce((SELECT webp_path FROM catalog.product_images i WHERE i.product_id=p.product_id ORDER BY position LIMIT 1),'') FROM catalog.products p WHERE "+query.Where+" ORDER BY "+query.Order+fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args)), args...)
+
 		if err != nil {
 			adminError(w, err)
 			return
@@ -124,8 +105,9 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 			adminError(w, rows.Err())
 			return
 		}
-		writeJSON(w, 200, map[string]any{"items": items})
+		writeJSON(w, 200, map[string]any{"items": items, "total": total})
 	}))
+	mux.HandleFunc("GET /api/admin/products/filters", protect(catalogFacets(pool, true)))
 	save := protect(func(w http.ResponseWriter, r *http.Request) {
 		var p adminProduct
 		if !adminBody(w, r, &p) {

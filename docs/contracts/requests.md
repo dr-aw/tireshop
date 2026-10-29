@@ -23,10 +23,10 @@ Runtime-роли разделены; DDL выполняет отдельная �
 
 ## Публичное оформление
 
-GET /api/products?limit=24&offset=0 возвращает объект items с доступными товарами:
-id, name, unit_price_rub, available. limit — 1–100, offset — 0–100000.
+GET /api/products?limit=24&offset=0 возвращает items и total с опубликованными
+товарами. Фильтры, сортировка и пагинация описаны в [контракте каталога](catalog.md).
 GET /api/products/{id} возвращает один товар, в том числе недоступный;
-невалидный UUID — 400, отсутствующий товар — 404. Полноценные фильтры ещё не добавлены.
+невалидный UUID — 400, отсутствующий товар — 404.
 
 POST /api/requests с заголовком Idempotency-Key (случайный UUID).
 Тело: customer_name, phone, comment и items — массив объектов с product_id,

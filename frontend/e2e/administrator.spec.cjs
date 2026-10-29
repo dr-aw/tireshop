@@ -24,7 +24,7 @@ test("administrator edits stock and request, dispatches once and retains history
   await row.getByRole("button", { name: "Изменить" }).click();
   await page.getByLabel("Текущий остаток, шт.").fill("8");
   await page.getByRole("button", { name: "Сохранить товар" }).click();
-  await expect(page.getByRole("status")).toHaveText("Товар сохранён");
+  await expect(page.locator(".admin-notice")).toHaveText("Товар сохранён");
 
   const response = await request.post("/api/requests", {
     headers: { "Idempotency-Key": "00000000-0000-4000-8000-000000000090" },
@@ -58,7 +58,7 @@ test("administrator edits stock and request, dispatches once and retains history
     .getByLabel("Комментарий сотрудника", { exact: false })
     .fill("Уточнено по телефону");
   await page.getByRole("button", { name: "Сохранить заявку" }).click();
-  await expect(page.getByRole("status")).toHaveText("Заявка сохранена");
+  await expect(page.locator(".admin-notice")).toHaveText("Заявка сохранена");
   await page
     .getByRole("combobox", { name: "Статус", exact: true })
     .selectOption("delivery");
@@ -91,6 +91,14 @@ test("administrator edits stock and request, dispatches once and retains history
   await page.getByLabel("Цена за штуку, ₽").fill("2500");
   await page.getByLabel("Текущий остаток, шт.").fill("4");
   await page.getByRole("button", { name: "Сохранить товар" }).click();
+  await page
+    .locator(".admin-filter-panel")
+    .getByLabel("Поиск", { exact: true })
+    .fill("Browser added wheel");
+  await page
+    .locator(".admin-filter-panel")
+    .getByRole("button", { name: "Применить", exact: true })
+    .click();
   const added = page
     .getByRole("row")
     .filter({ hasText: "Browser added wheel" });
@@ -104,6 +112,10 @@ test("administrator edits stock and request, dispatches once and retains history
   expect(publicList.items.some((p) => p.name === "Browser added wheel")).toBe(
     false,
   );
+  await page
+    .locator(".admin-filter-panel")
+    .getByRole("button", { name: "Сбросить фильтры", exact: true })
+    .click();
   await page.locator(".admin-column-picker summary").click();
   await page.getByRole("checkbox", { name: "Бренд", exact: true }).check();
   await page

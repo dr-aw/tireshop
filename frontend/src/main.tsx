@@ -4,6 +4,8 @@ import "./style.css";
 import { Administrator } from "./administrator";
 import { ProductPage } from "./product-page";
 import { BasketPhoto } from "./basket-photo";
+import { CatalogFilters, changeKind } from "./catalog-filters";
+import { useCatalogNavigation } from "./catalog-navigation";
 import { OrderSteps } from "./order-steps";
 import {
   ProductPhotos,
@@ -180,9 +182,23 @@ function App() {
   const [initial] = useState(readSaved);
   const [products, setProducts] = useState<Product[]>([]);
   const [catalogError, setCatalogError] = useState("");
-  const [category, setCategory] = useState("all");
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("default");
+  const {
+    values: filters,
+    navigate: navigateCatalog,
+    page: catalogPage,
+    query: catalogQuery,
+  } = useCatalogNavigation();
+  const category = filters.kind || "";
+  const [search, setSearch] = useState(filters.q || "");
+  useEffect(() => setSearch(filters.q || ""), [filters.q]);
+  const sort =
+    filters.sort === "unit_price_rub"
+      ? filters.direction === "desc"
+        ? "high"
+        : "low"
+      : filters.sort || "default";
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [cart, setCart] = useState<Line[]>(() => {
     try {
@@ -248,35 +264,37 @@ function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(productID ? `/api/products/${productID}` : "/api/products", {
-      signal: controller.signal,
-    })
-      .then(async (r) => {
-        if (!r.ok) throw Error();
-        const response = await r.json();
-        const data = productID ? { items: [response] } : response;
-        let pageLength = data.items.length;
-        while (!productID && (pageLength === 24 || pageLength === 100)) {
-          const next = await fetch(
-            `/api/products?limit=100&offset=${data.items.length}`,
-            { signal: controller.signal },
-          );
-          if (!next.ok) throw Error();
-          const page = await next.json();
-          pageLength = page.items.length;
-          data.items.push(...page.items);
-          if (data.items.length > 100000) throw Error();
+    setCatalogLoading(true);
+    setCatalogError("");
+    setProducts([]);
+    fetch(
+      productID
+        ? `/api/products/${productID}`
+        : `/api/products?${catalogQuery}`,
+      { signal: controller.signal },
+    )
+      .then(async (response) => {
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw Error(body.error?.message || "Каталог временно недоступен");
         }
-        setProducts(data.items);
+        return response.json();
+      })
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setProducts(productID ? [data] : data.items);
+          setCatalogTotal(productID ? 1 : data.total);
+        }
       })
       .catch((e) => {
-        if (e.name !== "AbortError")
-          setCatalogError(
-            "Каталог временно недоступен. Обновите страницу чуть позже.",
-          );
+        if (e.name !== "AbortError" && !controller.signal.aborted)
+          setCatalogError(e.message || "Каталог временно недоступен");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCatalogLoading(false);
       });
     return () => controller.abort();
-  }, []);
+  }, [productID, catalogQuery]);
 
   function persist(value: Saved) {
     try {
@@ -441,30 +459,7 @@ function App() {
     if (quick) setQuick((previous) => (previous ? update(previous) : null));
     else setCart(update);
   }
-  const visible = products
-    .filter(
-      (p) =>
-        (category === "all" ||
-          (category === "rims"
-            ? p.details?.kind === "wheel" || p.name.startsWith("Диск")
-            : !(p.details?.kind === "wheel" || p.name.startsWith("Диск")))) &&
-        (
-          productName(p.name) +
-          " " +
-          (p.details?.sku || "") +
-          " " +
-          (p.details?.size || "")
-        )
-          .toLocaleLowerCase("ru")
-          .includes(search.trim().toLocaleLowerCase("ru")),
-    )
-    .sort((a, b) =>
-      sort === "low"
-        ? a.unit_price_rub - b.unit_price_rub
-        : sort === "high"
-          ? b.unit_price_rub - a.unit_price_rub
-          : 0,
-    );
+  const visible = products;
   const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
 
   return (
@@ -550,9 +545,9 @@ function App() {
               <aside className="filters" aria-label="Категории каталога">
                 <h2>Каталог</h2>
                 {[
-                  ["all", "Все товары"],
-                  ["tyres", "Грузовые шины"],
-                  ["rims", "Грузовые диски"],
+                  ["", "Все товары"],
+                  ["tyre", "Грузовые шины"],
+                  ["wheel", "Грузовые диски"],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -562,12 +557,13 @@ function App() {
                         : "category-link"
                     }
                     aria-pressed={category === value}
-                    onClick={() => setCategory(value)}
+                    onClick={() => navigateCatalog(changeKind(filters, value))}
                   >
                     <span>{label}</span>
                     <span aria-hidden="true">↗</span>
                   </button>
                 ))}
+                <CatalogFilters values={filters} apply={navigateCatalog} />
                 <div className="selection-note">
                   <span className="note-icon" aria-hidden="true">
                     ↗
@@ -585,63 +581,102 @@ function App() {
               </aside>
               <section className="catalog-results" aria-label="Товары">
                 <div className="catalog-toolbar">
-                  <label className="search">
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      aria-hidden="true"
-                    >
-                      <circle cx="10" cy="10" r="7" />
-                      <path d="m15 15 6 6" />
-                    </svg>
-                    <input
-                      type="search"
-                      aria-label="Поиск по каталогу"
-                      placeholder="Название или размер, например 315/70"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
-                  </label>
+                  <form
+                    className="catalog-search-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      navigateCatalog({ ...filters, q: search.trim() });
+                    }}
+                  >
+                    <label className="search">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        aria-hidden="true"
+                      >
+                        <circle cx="10" cy="10" r="7" />
+                        <path d="m15 15 6 6" />
+                      </svg>
+                      <input
+                        type="search"
+                        aria-label="Поиск по каталогу"
+                        placeholder="Название или размер, например 315/70"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </label>
+                    <button type="submit" className="secondary">
+                      Найти
+                    </button>
+                  </form>
                   <label className="sort">
                     <span>Сортировка</span>
                     <select
                       aria-label="Сортировка"
                       value={sort}
-                      onChange={(e) => setSort(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        navigateCatalog({
+                          ...filters,
+                          sort:
+                            value === "default"
+                              ? ""
+                              : value === "low" || value === "high"
+                                ? "unit_price_rub"
+                                : value,
+                          direction: value === "high" ? "desc" : "asc",
+                        });
+                      }}
                     >
                       <option value="default">По умолчанию</option>
                       <option value="low">Сначала дешевле</option>
                       <option value="high">Сначала дороже</option>
+                      <option value="name">По названию</option>
+                      <option value="brand">По производителю</option>
                     </select>
                   </label>
                 </div>
                 <div className="results-heading">
                   <span>
-                    Найдено: <b>{visible.length}</b>
+                    Найдено: <b>{catalogLoading ? "…" : catalogTotal}</b>
                   </span>
-                  <span>Цена за 1 шт. · ₽</span>
+                  <span>Цена за единицу продажи · ₽</span>
                 </div>
                 {catalogError && (
                   <p role="alert" className="notice">
-                    {catalogError}
+                    {catalogError}{" "}
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => location.reload()}
+                    >
+                      Повторить
+                    </button>{" "}
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => navigateCatalog({})}
+                    >
+                      Сбросить подбор
+                    </button>
                   </p>
                 )}
-                {!products.length && !catalogError && <p>Загружаем каталог…</p>}
-                {products.length > 0 && !visible.length && (
+                {catalogLoading && <p role="status">Загружаем каталог…</p>}
+                {!catalogLoading && !catalogError && !visible.length && (
                   <div className="empty-results">
                     <h3>По вашему запросу ничего не найдено</h3>
                     <button
                       className="secondary"
                       onClick={() => {
                         setSearch("");
-                        setCategory("all");
+                        navigateCatalog({});
                       }}
                     >
-                      Сбросить поиск
+                      Сбросить подбор
                     </button>
                   </div>
                 )}
@@ -728,6 +763,36 @@ function App() {
                     </article>
                   ))}
                 </div>
+                {!catalogLoading && !catalogError && catalogTotal > 24 && (
+                  <nav
+                    className="catalog-pagination"
+                    aria-label="Страницы каталога"
+                  >
+                    <button
+                      className="secondary"
+                      disabled={catalogPage <= 1}
+                      onClick={() => {
+                        navigateCatalog(filters, catalogPage - 1);
+                        document.getElementById("catalog")?.scrollIntoView();
+                      }}
+                    >
+                      ← Назад
+                    </button>
+                    <span>
+                      Страница {catalogPage} из {Math.ceil(catalogTotal / 24)}
+                    </span>
+                    <button
+                      className="secondary"
+                      disabled={catalogPage * 24 >= catalogTotal}
+                      onClick={() => {
+                        navigateCatalog(filters, catalogPage + 1);
+                        document.getElementById("catalog")?.scrollIntoView();
+                      }}
+                    >
+                      Далее →
+                    </button>
+                  </nav>
+                )}
               </section>
             </div>
           </>

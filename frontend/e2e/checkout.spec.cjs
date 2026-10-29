@@ -73,7 +73,7 @@ test("lost committed response survives reload and retries the exact attempt", as
 test("buy now confirms an updated price with a new key and keeps the basket", async ({
   page,
 }) => {
-  await page.route("**/api/products", async (route) => {
+  await page.route(/\/api\/products(?:\?|$)/, async (route) => {
     const response = await route.fetch();
     const data = await response.json();
     // Simulate a page loaded before a catalog price update. The DB remains real.

@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json/v2"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
-	"strconv"
 	"time"
 	"tireshop/internal/catalogdata"
 
@@ -55,26 +55,21 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 	health(mux, pool)
 	catalogAdminDefaults(mux, pool)
 	mux.HandleFunc("GET /api/products", func(w http.ResponseWriter, r *http.Request) {
-		limit, offset := 24, 0
-		var err error
-		if raw := r.URL.Query().Get("limit"); raw != "" {
-			limit, err = strconv.Atoi(raw)
-		}
-		if err != nil || limit < 1 || limit > 100 {
-			fail(w, 400, "validation_error", "Некорректный размер страницы")
-			return
-		}
-		if raw := r.URL.Query().Get("offset"); raw != "" {
-			offset, err = strconv.Atoi(raw)
-		}
-		if err != nil || offset < 0 || offset > 100000 {
-			fail(w, 400, "validation_error", "Некорректный номер страницы")
+		query, err := parseCatalogQuery(r.URL.Query(), false)
+		if err != nil {
+			fail(w, 400, "validation_error", err.Error())
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
-		rows, err := pool.Query(ctx, `SELECT `+productColumns+`
-			FROM catalog.products p WHERE is_available ORDER BY product_id LIMIT $1 OFFSET $2`, limit, offset)
+		var total int
+		if err = pool.QueryRow(ctx, "SELECT count(*) FROM catalog.products p WHERE "+query.Where, query.Args...).Scan(&total); err != nil {
+			fail(w, 503, "unavailable", "Каталог временно недоступен")
+			return
+		}
+		args := append(query.Args, query.Limit, query.Offset)
+		rows, err := pool.Query(ctx, "SELECT "+productColumns+" FROM catalog.products p WHERE "+query.Where+" ORDER BY "+query.Order+fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args)), args...)
+
 		if err != nil {
 			fail(w, 503, "unavailable", "Каталог временно недоступен")
 			return
@@ -97,8 +92,10 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 		}
 		writeJSON(w, 200, struct {
 			Items []productDTO `json:"items"`
-		}{products})
+			Total int          `json:"total"`
+		}{products, total})
 	})
+	mux.HandleFunc("GET /api/products/filters", catalogFacets(pool, false))
 	mux.HandleFunc("GET /api/products/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		if !uuid.MatchString(id) {

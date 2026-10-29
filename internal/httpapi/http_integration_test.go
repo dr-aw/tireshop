@@ -142,6 +142,12 @@ func TestBrowserLostResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 	const origin = "http://127.0.0.1:5174"
+	for i := 0; i < 30; i++ {
+		_, err := catalog.Exec(t.Context(), `INSERT INTO catalog.products(product_id,name,sku,kind,brand,size,diameter,tread_percent,unit_price_rub,stock) VALUES($1,$2,$3,'tyre','Browser Filter Brand','315/70R22.5',22.5,80,$4,4)`, fmt.Sprintf("10000000-0000-4000-8000-%012d", i), fmt.Sprintf("Browser filter tyre %02d", i), fmt.Sprintf("BROWSER-FILTER-%02d", i), 1000+i)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	const bundleID = "00000000-0000-4000-8000-000000000091"
 	if _, err := catalog.Exec(t.Context(), `INSERT INTO catalog.products(product_id,name,unit_price_rub,stock,sku,kind,units_per_sale,description) VALUES($1,'Browser wheel bundle',25000,1,'BROWSER-SET','wheel',2,'Synthetic gallery fixture')`, bundleID); err != nil {
 		t.Fatal(err)

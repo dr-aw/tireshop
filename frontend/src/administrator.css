@@ -406,3 +406,21 @@
     align-items: flex-start;
   }
 }
+
+.admin-filter-panel {
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+.admin-filter-panel .filter-fields {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.admin-filter-panel .filter-actions {
+  grid-column: 1 / -1;
+}
+.admin-result-count {
+  color: var(--muted);
+  font-size: 13px;
+}

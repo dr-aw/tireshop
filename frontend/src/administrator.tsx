@@ -1,6 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import "./administrator.css";
 import {
+  CatalogFilters,
+  changeKind,
+  type FilterValues,
+} from "./catalog-filters";
+import {
   ColumnPicker,
   TableHeaders,
   TableCells,
@@ -102,6 +107,8 @@ export function Administrator() {
   const [notice, setNotice] = useState("");
   const [tab, setTab] = useState("requests");
   const [kind, setKind] = useState("");
+  const [productFilters, setProductFilters] = useState<FilterValues>({});
+  const [productTotal, setProductTotal] = useState(0);
   const [requests, setRequests] = useState<Request[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [choices, setChoices] = useState<Product[]>([]);
@@ -150,19 +157,26 @@ export function Administrator() {
     start: number,
     category = kind,
     order = settings,
+    filters = productFilters,
   ) {
     if (which === "requests")
       setRequests(
         (await api<{ items: Request[] }>(`requests?offset=${start}`)).items,
       );
-    else
-      setProducts(
-        (
-          await api<{ items: Product[] }>(
-            `products?offset=${start}&kind=${category}&sort=${order.sort}&direction=${order.direction}`,
-          )
-        ).items,
+    else {
+      const params = new URLSearchParams({
+        ...filters,
+        kind: category,
+        offset: String(start),
+        sort: order.sort,
+        direction: order.direction,
+      });
+      const data = await api<{ items: Product[]; total: number }>(
+        `products?${params}`,
       );
+      setProducts(data.items);
+      setProductTotal(data.total);
+    }
     setOffset(start);
     setTab(which);
   }
@@ -369,7 +383,9 @@ export function Administrator() {
                     disabled={busy}
                     onClick={() =>
                       void run(async () => {
-                        await load("products", 0, value);
+                        const next = changeKind(productFilters, value);
+                        await load("products", 0, value, settings, next);
+                        setProductFilters(next);
                         setKind(value);
                       })
                     }
@@ -380,7 +396,21 @@ export function Administrator() {
               </div>
             )}
             {tab === "products" && !product && (
-              <ColumnPicker settings={settings} change={changeSettings} />
+              <>
+                <CatalogFilters
+                  admin
+                  disabled={busy}
+                  values={{ ...productFilters, kind }}
+                  apply={(next) =>
+                    void run(async () => {
+                      await load("products", 0, kind, settings, next);
+                      setProductFilters(next);
+                    })
+                  }
+                />
+                <p className="admin-result-count">Найдено: {productTotal}</p>
+                <ColumnPicker settings={settings} change={changeSettings} />
+              </>
             )}
             <div
               className="admin-card admin-table-wrap"
@@ -482,7 +512,10 @@ export function Administrator() {
               <span>Страница {offset / 50 + 1}</span>
               <button
                 disabled={
-                  busy || (tab === "requests" ? requests : products).length < 50
+                  busy ||
+                  (tab === "requests"
+                    ? requests.length < 50
+                    : offset + 50 >= productTotal)
                 }
                 onClick={() => void run(() => load(tab, offset + 50))}
               >
