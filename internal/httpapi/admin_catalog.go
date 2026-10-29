@@ -75,12 +75,12 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 			return
 		}
 		var total int
-		if err = pool.QueryRow(r.Context(), "SELECT count(*) FROM catalog.products p WHERE "+query.Where, query.Args...).Scan(&total); err != nil {
+		if err = pool.QueryRow(r.Context(), "SELECT count(*) FROM catalog.product_details p WHERE "+query.Where, query.Args...).Scan(&total); err != nil {
 			adminError(w, err)
 			return
 		}
 		args := append(query.Args, query.Limit, query.Offset)
-		rows, err := pool.Query(r.Context(), "SELECT product_id::text,name,unit_price_rub,is_available,stock,version,"+catalogdata.Select("p")+",coalesce((SELECT webp_path FROM catalog.product_images i WHERE i.product_id=p.product_id ORDER BY position LIMIT 1),'') FROM catalog.products p WHERE "+query.Where+" ORDER BY "+query.Order+fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args)), args...)
+		rows, err := pool.Query(r.Context(), "SELECT product_id::text,name,unit_price_rub,is_available,stock,version,"+catalogdata.Select("p")+",coalesce((SELECT webp_path FROM catalog.product_images i WHERE i.product_id=p.product_id ORDER BY position LIMIT 1),'') FROM catalog.product_details p WHERE "+query.Where+" ORDER BY "+query.Order+fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args)), args...)
 
 		if err != nil {
 			adminError(w, err)
@@ -130,12 +130,7 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 		defer tx.Rollback(r.Context())
 		finish := func(id string) bool {
 			if p.Details != nil {
-				raw, e := json.Marshal(p.Details)
-				if e != nil {
-					adminError(w, e)
-					return false
-				}
-				if _, e = tx.Exec(r.Context(), catalogdata.UpdateSQL(), id, raw); e != nil {
+				if e := catalogdata.Save(r.Context(), tx, id, *p.Details); e != nil {
 					adminError(w, e)
 					return false
 				}

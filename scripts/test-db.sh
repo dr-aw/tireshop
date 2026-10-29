@@ -31,6 +31,7 @@ trap 'exit 143' TERM
 createdb "$PGDATABASE"
 created=true
 bash scripts/db-bootstrap.sh
+bash scripts/test-catalog-migration.sh
 bash scripts/db-migrate.sh
 # Run up again to check repeatability, without dropping data.
 bash scripts/db-migrate.sh

@@ -1,5 +1,9 @@
 import { useRef, useState, type ReactNode } from "react";
 export type CatalogDetails = {
+  tyre_width: number | null;
+  tyre_width_unit: string;
+  aspect_ratio: number | null;
+  rim_diameter: number | null;
   sku: string;
   kind: string;
   description: string;
@@ -24,6 +28,10 @@ export type CatalogDetails = {
 };
 export function emptyDetails(): CatalogDetails {
   return {
+    tyre_width: null,
+    tyre_width_unit: "",
+    aspect_ratio: null,
+    rim_diameter: null,
     sku: "",
     kind: "tyre",
     description: "",
@@ -54,20 +62,76 @@ export const detailLabels: [keyof CatalogDetails, string, boolean?][] = [
   ["brand", "Бренд"],
   ["model", "Модель"],
   ["production_year", "Год выпуска", true],
-  ["size", "Размер"],
+  ["size", "Размер / маркировка"],
+  ["tyre_width", "Ширина шины", true],
+  ["aspect_ratio", "Профиль шины, %", true],
+  ["rim_diameter", "Посадочный диаметр шины, дюймы", true],
   ["season", "Сезонность"],
   ["tread_percent", "Протектор, %", true],
   ["load_index", "Нагрузка / PR"],
   ["speed_index", "Индекс скорости"],
   ["condition", "Состояние"],
-  ["diameter", "Диаметр, дюймы", true],
-  ["width", "Ширина, дюймы", true],
+  ["diameter", "Диаметр диска, дюймы", true],
+  ["width", "Ширина диска, дюймы", true],
   ["wheel_offset", "Вылет ET, мм", true],
   ["pcd", "Сверловка PCD"],
   ["wheel_type", "Тип диска"],
   ["center_bore", "Диаметр ЦО, мм", true],
   ["location", "Место хранения"],
 ];
+const tyreKeys = [
+  "season",
+  "tread_percent",
+  "load_index",
+  "speed_index",
+  "tyre_width",
+  "tyre_width_unit",
+  "aspect_ratio",
+  "rim_diameter",
+];
+const wheelKeys = [
+  "diameter",
+  "width",
+  "wheel_offset",
+  "pcd",
+  "wheel_type",
+  "center_bore",
+];
+export function labelsFor(kind: string) {
+  return detailLabels
+    .filter(([key]) => !(kind === "wheel" ? tyreKeys : wheelKeys).includes(key))
+    .map(([key, label, numeric]): [keyof CatalogDetails, string, boolean?] => [
+      key,
+      key === "size"
+        ? kind === "wheel"
+          ? "Маркировка диска"
+          : "Размер шины"
+        : label,
+      numeric,
+    ]);
+}
+export function detailValue(d: CatalogDetails, key: keyof CatalogDetails) {
+  if (key === "tyre_width" && d.tyre_width != null)
+    return (
+      String(d.tyre_width) +
+      (d.tyre_width_unit === "mm"
+        ? " мм"
+        : d.tyre_width_unit === "in"
+          ? "″"
+          : "")
+    );
+  return d[key];
+}
+export function changeProductKind(
+  value: CatalogDetails,
+  kind: string,
+): CatalogDetails {
+  const next = { ...value, kind, size: "" };
+  const defaults = emptyDetails();
+  for (const key of [...tyreKeys, ...wheelKeys] as (keyof CatalogDetails)[])
+    Object.assign(next, { [key]: defaults[key] });
+  return next;
+}
 export function ProductPhotos({
   images,
   name,
@@ -205,7 +269,7 @@ export function ProductSpecifications({
     <details className="catalog-specs">
       <summary>Характеристики и описание</summary>
       <dl>
-        {detailLabels
+        {labelsFor(details.kind)
           .filter(
             ([key]) =>
               key !== "location" &&
@@ -215,7 +279,7 @@ export function ProductSpecifications({
           .map(([key, label]) => (
             <div key={key}>
               <dt>{label}</dt>
-              <dd>{details[key]}</dd>
+              <dd>{detailValue(details, key)}</dd>
             </div>
           ))}
       </dl>
@@ -238,34 +302,19 @@ export function DetailsEditor({
       <label>
         Категория
         <select
+          aria-label="Категория"
           value={value.kind}
-          onChange={(e) => onChange({ ...value, kind: e.target.value })}
+          onChange={(e) => onChange(changeProductKind(value, e.target.value))}
         >
           <option value="tyre">Шина</option>
           <option value="wheel">Диск</option>
         </select>
       </label>
       <div className="admin-fields">
-        {detailLabels
-          .filter(([key]) =>
-            value.kind === "wheel"
-              ? ![
-                  "production_year",
-                  "size",
-                  "season",
-                  "tread_percent",
-                  "load_index",
-                  "speed_index",
-                ].includes(key)
-              : ![
-                  "condition",
-                  "diameter",
-                  "width",
-                  "wheel_offset",
-                  "pcd",
-                  "wheel_type",
-                  "center_bore",
-                ].includes(key),
+        {labelsFor(value.kind)
+          .filter(
+            ([key]) =>
+              !["tyre_width", "aspect_ratio", "rim_diameter"].includes(key),
           )
           .map(([key, label, numeric]) => (
             <label key={key}>
@@ -288,6 +337,12 @@ export function DetailsEditor({
             </label>
           ))}
       </div>
+      {value.kind === "tyre" && (
+        <p className="fineprint">
+          Ширина, профиль и посадочный диаметр определяются по размеру шины. Для
+          неизвестного формата параметры остаются пустыми.
+        </p>
+      )}
       <label>
         Штук в единице продажи
         <input

@@ -18,10 +18,10 @@ import (
 )
 
 // Only these catalog-owned columns may be used in public filters or facets.
-var catalogFilterFields = []string{"brand", "model", "size", "condition", "production_year", "diameter", "width", "season", "load_index", "speed_index", "wheel_offset", "pcd", "wheel_type", "center_bore"}
-var numericCatalogFilters = map[string]bool{"production_year": true, "diameter": true, "width": true, "wheel_offset": true, "center_bore": true}
-var tyreFilters = map[string]bool{"season": true, "load_index": true, "speed_index": true, "tread_min": true, "tread_max": true}
-var wheelFilters = map[string]bool{"wheel_offset": true, "pcd": true, "wheel_type": true, "center_bore": true}
+var catalogFilterFields = []string{"brand", "model", "size", "condition", "production_year", "diameter", "width", "season", "load_index", "speed_index", "wheel_offset", "pcd", "wheel_type", "center_bore", "tyre_width", "aspect_ratio", "rim_diameter"}
+var numericCatalogFilters = map[string]bool{"production_year": true, "diameter": true, "width": true, "wheel_offset": true, "center_bore": true, "aspect_ratio": true, "rim_diameter": true}
+var tyreFilters = map[string]bool{"size": true, "tyre_width": true, "aspect_ratio": true, "rim_diameter": true, "season": true, "load_index": true, "speed_index": true, "tread_min": true, "tread_max": true}
+var wheelFilters = map[string]bool{"diameter": true, "width": true, "wheel_offset": true, "pcd": true, "wheel_type": true, "center_bore": true}
 
 type catalogQuery struct {
 	Where, Order  string
@@ -77,7 +77,7 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 		add("p.kind=$%d", kind)
 	}
 	for key := range values {
-		if values.Get(key) != "" && ((kind == "tyre" && wheelFilters[key]) || (kind == "wheel" && tyreFilters[key])) {
+		if values.Get(key) != "" && ((kind != "wheel" && wheelFilters[key]) || (kind != "tyre" && tyreFilters[key])) {
 			return invalid()
 		}
 	}
@@ -98,6 +98,19 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 		if utf8.RuneCountInString(value) > 200 {
 			return invalid()
 		}
+		if field == "tyre_width" {
+			parts := strings.Fields(value)
+			if len(parts) != 2 || (parts[1] != "mm" && parts[1] != "in") {
+				return invalid()
+			}
+			n, e := strconv.ParseFloat(parts[0], 64)
+			if e != nil || math.IsNaN(n) || math.IsInf(n, 0) || n <= 0 || n > 10000 {
+				return invalid()
+			}
+			add("p.tyre_width=$%d", n)
+			add("p.tyre_width_unit=$%d", parts[1])
+			continue
+		}
 		if numericCatalogFilters[field] {
 			n, e := strconv.ParseFloat(value, 64)
 			if e != nil || math.IsNaN(n) || math.IsInf(n, 0) || math.Abs(n) > 10000 {
@@ -106,7 +119,10 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 			if field == "production_year" && (n < 1900 || n > 2200 || n != math.Trunc(n)) {
 				return invalid()
 			}
-			if (field == "width" || field == "diameter" || field == "center_bore") && n <= 0 {
+			if (field == "width" || field == "diameter" || field == "center_bore" || field == "rim_diameter" || field == "aspect_ratio") && n <= 0 {
+				return invalid()
+			}
+			if field == "aspect_ratio" && n > 100 {
 				return invalid()
 			}
 			add("p."+field+"=$%d", n)
@@ -210,9 +226,16 @@ func catalogFacets(pool *pgxpool.Pool, admin bool) http.HandlerFunc {
 		defer cancel()
 		columns := make([]string, 0, len(catalogFilterFields))
 		for _, field := range catalogFilterFields {
-			columns = append(columns, "'"+field+"',p."+field)
+			if (tyreFilters[field] && r.URL.Query().Get("kind") != "tyre") || (wheelFilters[field] && r.URL.Query().Get("kind") != "wheel") {
+				continue
+			}
+			expression := "p." + field
+			if field == "tyre_width" {
+				expression = "p.tyre_width::text || ' ' || p.tyre_width_unit"
+			}
+			columns = append(columns, "'"+field+"',"+expression)
 		}
-		rows, err := pool.Query(ctx, "SELECT jsonb_build_object("+strings.Join(columns, ",")+") FROM catalog.products p WHERE "+q.Where, q.Args...)
+		rows, err := pool.Query(ctx, "SELECT jsonb_build_object("+strings.Join(columns, ",")+") FROM catalog.product_details p WHERE "+q.Where, q.Args...)
 		if err != nil {
 			adminError(w, err)
 			return

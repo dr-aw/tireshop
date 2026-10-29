@@ -8,6 +8,10 @@ import (
 )
 
 type Details struct {
+	TyreWidth      *float64 `json:"tyre_width"`
+	TyreWidthUnit  string   `json:"tyre_width_unit"`
+	AspectRatio    *float64 `json:"aspect_ratio"`
+	RimDiameter    *float64 `json:"rim_diameter"`
 	SKU            string   `json:"sku"`
 	Kind           string   `json:"kind"`
 	Description    string   `json:"description"`
@@ -31,7 +35,7 @@ type Details struct {
 	ReviewNotes    string   `json:"review_notes"`
 }
 
-var Fields = []string{"sku", "kind", "description", "brand", "model", "production_year", "size", "season", "tread_percent", "load_index", "speed_index", "location", "condition", "diameter", "width", "wheel_offset", "pcd", "wheel_type", "center_bore", "units_per_sale", "review_notes"}
+var Fields = []string{"tyre_width", "tyre_width_unit", "aspect_ratio", "rim_diameter", "sku", "kind", "description", "brand", "model", "production_year", "size", "season", "tread_percent", "load_index", "speed_index", "location", "condition", "diameter", "width", "wheel_offset", "pcd", "wheel_type", "center_bore", "units_per_sale", "review_notes"}
 
 // SQL contains only hardcoded field names, never user input.
 func Select(alias string) string {
@@ -41,16 +45,15 @@ func Select(alias string) string {
 	}
 	return "jsonb_build_object(" + strings.Join(parts, ",") + ")"
 }
-func UpdateSQL() string {
-	parts := []string{}
-	for _, field := range Fields {
-		parts = append(parts, field+"=d."+field)
-	}
-	return `UPDATE catalog.products p SET ` + strings.Join(parts, ",") + ` FROM jsonb_populate_record(NULL::catalog.products,$2::jsonb) d WHERE p.product_id=$1::uuid`
-}
 func (d Details) Validate() error {
 	if d.Kind != "tyre" && d.Kind != "wheel" {
 		return fmt.Errorf("invalid kind")
+	}
+	if d.Kind == "tyre" && (d.Diameter != nil || d.Width != nil || d.WheelOffset != nil || d.PCD != "" || d.WheelType != "" || d.CenterBore != nil) {
+		return fmt.Errorf("wheel attributes on tyre")
+	}
+	if d.Kind == "wheel" && (d.Season != "" || d.TreadPercent != nil || d.LoadIndex != "" || d.SpeedIndex != "") {
+		return fmt.Errorf("tyre attributes on wheel")
 	}
 	if d.UnitsPerSale < 1 || d.UnitsPerSale > 100 {
 		return fmt.Errorf("invalid sale unit")

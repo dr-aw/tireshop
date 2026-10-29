@@ -4,18 +4,21 @@ export type FilterValues = Record<string, string>;
 const common = [
   ["brand", "Производитель"],
   ["model", "Модель"],
-  ["size", "Размер"],
   ["condition", "Состояние"],
   ["production_year", "Год выпуска"],
-  ["diameter", "Диаметр, дюймы"],
-  ["width", "Ширина (как в каталоге)"],
 ];
 const tyre = [
+  ["size", "Размер шины"],
+  ["tyre_width", "Ширина шины"],
+  ["aspect_ratio", "Профиль, %"],
+  ["rim_diameter", "Посадочный диаметр, дюймы"],
   ["season", "Сезон"],
   ["load_index", "Индекс нагрузки"],
   ["speed_index", "Индекс скорости"],
 ];
 const wheel = [
+  ["diameter", "Диаметр диска, дюймы"],
+  ["width", "Ширина диска, дюймы"],
   ["wheel_offset", "Вылет ET, мм"],
   ["pcd", "Сверловка PCD"],
   ["center_bore", "Ступица DIA, мм"],
@@ -184,7 +187,9 @@ export function CatalogFilters({
                 )}
                 {(options[key] || []).map((value) => (
                   <option key={value} value={value}>
-                    {value}
+                    {key === "tyre_width"
+                      ? value.replace(/ mm$/, " мм").replace(/ in$/, "″")
+                      : value}
                   </option>
                 ))}
               </select>

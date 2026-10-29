@@ -1,6 +1,7 @@
 import {
   ProductPhotos,
-  detailLabels,
+  labelsFor,
+  detailValue,
   type CatalogDetails,
 } from "./catalog-details";
 type Product = {
@@ -115,7 +116,7 @@ export function ProductPage({
           >
             <tbody>
               {p.details &&
-                detailLabels
+                labelsFor(p.details.kind)
                   .filter(
                     ([key]) =>
                       key !== "location" &&
@@ -125,7 +126,7 @@ export function ProductPage({
                   .map(([key, label]) => (
                     <tr key={key}>
                       <th scope="row">{label}</th>
-                      <td>{p.details![key]}</td>
+                      <td>{detailValue(p.details!, key)}</td>
                     </tr>
                   ))}
             </tbody>

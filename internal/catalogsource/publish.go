@@ -59,11 +59,7 @@ func Publish(ctx context.Context, pool *pgxpool.Pool, batch Batch, media []Media
 		if _, err = tx.Exec(ctx, `INSERT INTO catalog.products(product_id,name,unit_price_rub,stock,is_available) VALUES($1::uuid,$2,$3,$4,$5)`, p.ID, p.Name, p.Price, p.Stock, p.Available); err != nil {
 			return false, fmt.Errorf("product %s conflicts; entire import rolled back: %w", p.Details.SKU, err)
 		}
-		d, e := json.Marshal(p.Details)
-		if e != nil {
-			return false, e
-		}
-		if _, err = tx.Exec(ctx, catalogdata.UpdateSQL(), p.ID, d); err != nil {
+		if err = catalogdata.Save(ctx, tx, p.ID, p.Details); err != nil {
 			return false, err
 		}
 		r, e := json.Marshal(p.Row)

@@ -1,5 +1,6 @@
 import {
   detailLabels,
+  detailValue,
   unitLabel,
   type CatalogDetails,
 } from "./catalog-details";
@@ -200,7 +201,10 @@ export function TableCells({
         else if (key === "is_available") content = p.available ? "Да" : "Скрыт";
         else if (key === "kind")
           content = p.details?.kind === "wheel" ? "Диск" : "Шина";
-        else content = p.details?.[key as keyof CatalogDetails] ?? "—";
+        else
+          content = p.details
+            ? (detailValue(p.details, key as keyof CatalogDetails) ?? "—")
+            : "—";
         return (
           <td key={key} data-column={key}>
             {content === "" ? "—" : content}
