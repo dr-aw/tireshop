@@ -312,3 +312,62 @@
     padding: 24px;
   }
 }
+.administrator tr.admin-zero-stock td {
+  background: #fff1f2;
+}
+.admin-product-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-thumbnail {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  overflow: hidden;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  background: #f3f4f6;
+  color: #8c939e;
+}
+.admin-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.admin-column-picker {
+  margin: 16px 0;
+}
+.admin-column-picker > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 4px 16px;
+  margin: 12px 0;
+}
+.administrator .admin-column-picker label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 3px 0;
+  font-weight: 400;
+}
+.administrator .admin-column-picker input {
+  width: auto;
+}
+.administrator th button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  text-transform: inherit;
+}
+.administrator td[data-column="description"],
+.administrator td[data-column="review_notes"] {
+  max-width: 360px;
+  min-width: 200px;
+  overflow-wrap: anywhere;
+}

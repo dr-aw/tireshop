@@ -104,6 +104,42 @@ test("administrator edits stock and request, dispatches once and retains history
   expect(publicList.items.some((p) => p.name === "Browser added wheel")).toBe(
     false,
   );
+  await page.locator(".admin-column-picker summary").click();
+  await page.getByRole("checkbox", { name: "Бренд", exact: true }).check();
+  await page
+    .getByRole("checkbox", { name: "Вылет ET, мм", exact: true })
+    .check();
+  await expect(
+    page.getByRole("columnheader").filter({ hasText: "Вылет ET" }),
+  ).toBeVisible();
+  const sorted = page.waitForResponse(
+    (r) => r.url().includes("sort=unit_price_rub") && r.status() === 200,
+  );
+  await page
+    .getByRole("columnheader")
+    .filter({ hasText: "Цена за единицу" })
+    .getByRole("button")
+    .click();
+  await sorted;
+  await expect(
+    page.getByRole("columnheader").filter({ hasText: "Цена за единицу" }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Каталог и остатки", exact: true })
+    .click();
+  await expect(
+    page.getByRole("columnheader").filter({ hasText: "Вылет ET" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader").filter({ hasText: "Цена за единицу" }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  const zero = page.locator("tr.admin-zero-stock").first();
+  await expect(zero.locator('td[data-column="stock"]')).toHaveText("0");
+  await expect(zero.locator("td").first()).toHaveCSS(
+    "background-color",
+    "rgb(255, 241, 242)",
+  );
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
     path: ".tmp/administrator-mobile.png",

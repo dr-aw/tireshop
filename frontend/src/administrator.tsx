@@ -1,6 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import "./administrator.css";
 import {
+  ColumnPicker,
+  TableHeaders,
+  TableCells,
+  readSettings,
+  saveSettings,
+  type TableSettings,
+} from "./admin-table";
+import {
   DetailsEditor,
   emptyDetails,
   unitLabel,
@@ -8,6 +16,7 @@ import {
 } from "./catalog-details";
 
 type Product = {
+  image_url?: string;
   details?: CatalogDetails;
   id: string;
   name: string;
@@ -99,6 +108,18 @@ export function Administrator() {
   const [offset, setOffset] = useState(0);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
+  const [settingsByUser, setSettingsByUser] = useState<
+    Record<string, TableSettings>
+  >({});
+  const settings = settingsByUser[user || ""] || readSettings(user || "");
+  function changeSettings(next: TableSettings) {
+    setSettingsByUser((old) => ({ ...old, [user!]: next }));
+    try {
+      saveSettings(user!, next);
+    } catch {
+      setError("Не удалось сохранить настройки таблицы в браузере");
+    }
+  }
 
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -124,7 +145,12 @@ export function Administrator() {
       setBusy(false);
     }
   }
-  async function load(which: string, start: number, category = kind) {
+  async function load(
+    which: string,
+    start: number,
+    category = kind,
+    order = settings,
+  ) {
     if (which === "requests")
       setRequests(
         (await api<{ items: Request[] }>(`requests?offset=${start}`)).items,
@@ -133,7 +159,7 @@ export function Administrator() {
       setProducts(
         (
           await api<{ items: Product[] }>(
-            `products?offset=${start}&kind=${category}`,
+            `products?offset=${start}&kind=${category}&sort=${order.sort}&direction=${order.direction}`,
           )
         ).items,
       );
@@ -353,6 +379,9 @@ export function Administrator() {
                 ))}
               </div>
             )}
+            {tab === "products" && !product && (
+              <ColumnPicker settings={settings} change={changeSettings} />
+            )}
             <div
               className="admin-card admin-table-wrap"
               hidden={!!detail || !!product}
@@ -360,18 +389,35 @@ export function Administrator() {
               <table>
                 <thead>
                   <tr>
-                    {(tab === "requests"
-                      ? ["Заявка / дата", "Покупатель", "Статус", "Сумма", ""]
-                      : [
-                          "Товар",
-                          "Цена за единицу",
-                          "Остаток",
-                          "На витрине",
-                          "",
-                        ]
-                    ).map((h, i) => (
-                      <th key={i}>{h}</th>
-                    ))}
+                    {tab === "requests" ? (
+                      [
+                        "Заявка / дата",
+                        "Покупатель",
+                        "Статус",
+                        "Сумма",
+                        "",
+                      ].map((h, i) => <th key={i}>{h}</th>)
+                    ) : (
+                      <TableHeaders
+                        settings={settings}
+                        busy={busy}
+                        sort={(key) =>
+                          void run(async () => {
+                            const next = {
+                              ...settings,
+                              sort: key,
+                              direction:
+                                settings.sort === key &&
+                                settings.direction === "asc"
+                                  ? ("desc" as const)
+                                  : ("asc" as const),
+                            };
+                            await load("products", 0, kind, next);
+                            changeSettings(next);
+                          })
+                        }
+                      />
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -403,22 +449,13 @@ export function Administrator() {
                         </tr>
                       ))
                     : products.map((p) => (
-                        <tr key={p.id}>
-                          <td>
-                            {p.name}
-                            <small>{p.details?.sku}</small>
-                            {p.details?.review_notes && (
-                              <small>{p.details.review_notes}</small>
-                            )}
-                          </td>
-                          <td>{money(p.unit_price_rub)}</td>
-                          <td>
-                            {p.stock}
-                            {(p.details?.units_per_sale || 1) > 1 && (
-                              <small>{unitLabel(p.details)}</small>
-                            )}
-                          </td>
-                          <td>{p.available ? "Да" : "Скрыт"}</td>
+                        <tr
+                          key={p.id}
+                          className={
+                            p.stock === 0 ? "admin-zero-stock" : undefined
+                          }
+                        >
+                          <TableCells product={p} settings={settings} />
                           <td>
                             <button
                               disabled={busy}

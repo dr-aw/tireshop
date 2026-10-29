@@ -122,6 +122,21 @@ func TestAdministratorHTTP(t *testing.T) {
 	call("PUT", cs.URL+"/api/admin/products/"+id, p, false, 403)
 	call("PUT", cs.URL+"/api/admin/products/"+id, p, true, 200)
 	call("PUT", cs.URL+"/api/admin/products/"+id, p, true, 409)
+	call("GET", cs.URL+"/api/admin/products?sort=not_a_column", nil, false, 400)
+	for _, direction := range []string{"asc", "desc"} {
+		var result struct {
+			Items []adminProduct `json:"items"`
+		}
+		if err := json.Unmarshal(call("GET", cs.URL+"/api/admin/products?sort=unit_price_rub&direction="+direction, nil, false, 200), &result); err != nil {
+			t.Fatal(err)
+		}
+		for i := 1; i < len(result.Items); i++ {
+			a, b := *result.Items[i-1].UnitPriceRub, *result.Items[i].UnitPriceRub
+			if direction == "asc" && a > b || direction == "desc" && a < b {
+				t.Fatal("catalog sort order incorrect")
+			}
+		}
+	}
 	var edit postgres.AdminEdit
 	if err := json.Unmarshal([]byte(fmt.Sprintf(`{"version":1,"status":"delivery","comment":"Sent","items":[{"product_id":%q,"quantity":3}]}`, id)), &edit); err != nil {
 		t.Fatal(err)

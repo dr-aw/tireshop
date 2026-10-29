@@ -23,6 +23,7 @@ type adminProduct struct {
 	Stock        *int64               `json:"stock"`
 	Version      int64                `json:"version"`
 	Details      *catalogdata.Details `json:"details,omitempty"`
+	ImageURL     string               `json:"image_url,omitempty"`
 }
 
 // The catalog knows only the session introspection HTTP contract. The requests
@@ -75,7 +76,31 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 			fail(w, 400, "validation_error", "Некорректная категория")
 			return
 		}
-		rows, err := pool.Query(r.Context(), `SELECT product_id::text,name,unit_price_rub,is_available,stock,version,`+catalogdata.Select("p")+` FROM catalog.products p WHERE ($2 = '' OR kind = $2) ORDER BY product_id LIMIT 50 OFFSET $1`, offset, kind)
+		field := r.URL.Query().Get("sort")
+		direction := r.URL.Query().Get("direction")
+		allowed := map[string]bool{"name": true, "unit_price_rub": true, "stock": true, "is_available": true}
+		for _, key := range catalogdata.Fields {
+			allowed[key] = true
+		}
+		order := "p.product_id"
+		if field != "" {
+			if !allowed[field] {
+				fail(w, 400, "validation_error", "Неизвестное поле сортировки")
+				return
+			}
+			order = "p." + field
+		}
+		if direction != "" && direction != "asc" && direction != "desc" {
+			fail(w, 400, "validation_error", "Некорректный порядок сортировки")
+			return
+		}
+		if direction == "desc" {
+			order += " DESC"
+		} else {
+			order += " ASC"
+		}
+		order += " NULLS LAST, p.product_id ASC"
+		rows, err := pool.Query(r.Context(), `SELECT product_id::text,name,unit_price_rub,is_available,stock,version,`+catalogdata.Select("p")+`,coalesce((SELECT webp_path FROM catalog.product_images i WHERE i.product_id=p.product_id ORDER BY position LIMIT 1),'') FROM catalog.products p WHERE ($2 = '' OR kind = $2) ORDER BY `+order+` LIMIT 50 OFFSET $1`, offset, kind)
 		if err != nil {
 			adminError(w, err)
 			return
@@ -85,7 +110,7 @@ func catalogAdmin(mux *http.ServeMux, pool *pgxpool.Pool, sessionURL string, ori
 		for rows.Next() {
 			var p adminProduct
 			var raw []byte
-			if err := rows.Scan(&p.ID, &p.Name, &p.UnitPriceRub, &p.Available, &p.Stock, &p.Version, &raw); err != nil {
+			if err := rows.Scan(&p.ID, &p.Name, &p.UnitPriceRub, &p.Available, &p.Stock, &p.Version, &raw, &p.ImageURL); err != nil {
 				adminError(w, err)
 				return
 			}

@@ -15,11 +15,13 @@ export function BasketPhoto({
   name,
   url,
   fallback,
+  lookup = true,
 }: {
   id: string;
   name: string;
   url?: string;
   fallback: ReactNode;
+  lookup?: boolean;
 }) {
   const [source, setSource] = useState<string | undefined>(safeURL(url));
   const [original, setOriginal] = useState(false);
@@ -30,6 +32,7 @@ export function BasketPhoto({
       return;
     }
     const controller = new AbortController();
+    if (!lookup) return;
     fetch(`/api/products/${encodeURIComponent(id)}`, {
       signal: controller.signal,
     })
@@ -37,7 +40,7 @@ export function BasketPhoto({
       .then((p) => setSource(safeURL(p?.images?.[0]?.url)))
       .catch(() => {});
     return () => controller.abort();
-  }, [id, url]);
+  }, [id, url, lookup]);
   if (!source || failed) return <>{fallback}</>;
   return (
     <img
