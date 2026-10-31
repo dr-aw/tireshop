@@ -82,3 +82,7 @@ run = "bash scripts/admin-user.sh"
 [tasks."test:browser"]
 description = "Test browser checkout against real APIs and a temporary test DB"
 run = "TIRESHOP_BROWSER_TEST=1 bash scripts/test-db.sh"
+
+[tasks."frontend:build"]
+description = "Typecheck and build static frontend without Go or database access"
+run = "tsc -p frontend && vite build frontend"
