@@ -39,6 +39,12 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Configure Git access in the build container
+        run: |
+          # Checkout's JS action and shell steps can use different global configs.
+          # Trust only this checkout, preserving Go's VCS revision metadata.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" status --porcelain >/dev/null
       - name: Prepare locked toolchain and disposable DB credentials
         run: bash .github/scripts/setup-ci.sh
       - name: Install frontend dependencies and Chromium
