@@ -19,7 +19,6 @@ export function ProductPage({
   quantity,
   setQuantity,
   add,
-  buy,
   locked,
   fallback,
 }: {
@@ -27,7 +26,6 @@ export function ProductPage({
   quantity: number;
   setQuantity: (n: number) => void;
   add: () => void;
-  buy: () => void;
   locked: boolean;
   fallback: React.ReactNode;
 }) {
@@ -76,13 +74,14 @@ export function ProductPage({
               type="number"
               aria-label={`Количество: ${p.name}`}
               min={1}
-              max={10000}
+              max={p.stock ?? 0}
               step={1}
               value={quantity}
-              disabled={locked || !p.available}
+              disabled={locked || !p.available || !p.stock}
               onChange={(e) => {
                 const n = e.target.valueAsNumber;
-                if (Number.isInteger(n) && n >= 1 && n <= 10000) setQuantity(n);
+                if (Number.isInteger(n) && n >= 1 && n <= (p.stock ?? 0))
+                  setQuantity(n);
               }}
             />
           </label>
@@ -93,13 +92,6 @@ export function ProductPage({
               onClick={add}
             >
               В корзину
-            </button>
-            <button
-              className="buy-now"
-              disabled={locked || !p.available}
-              onClick={buy}
-            >
-              Купить сейчас ↗
             </button>
           </div>
           <p className="muted">

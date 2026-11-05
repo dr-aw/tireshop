@@ -70,9 +70,7 @@ test("lost committed response survives reload and retries the exact attempt", as
   expect(errors).toEqual([]);
 });
 
-test("buy now confirms an updated price with a new key and keeps the basket", async ({
-  page,
-}) => {
+test("basket confirms updated prices and respects stock", async ({ page }) => {
   await page.route(/\/api\/products(?:\?|$)/, async (route) => {
     const response = await route.fetch();
     const data = await response.json();
@@ -85,10 +83,12 @@ test("buy now confirms an updated price with a new key and keeps the basket", as
   const card = page
     .locator("article")
     .filter({ hasText: "Browser synthetic tyre" });
-  await card.getByRole("spinbutton").fill("2");
+  await card.getByRole("spinbutton").fill("1");
   await card.getByRole("button", { name: "В корзину", exact: true }).click();
   await card.getByRole("spinbutton").fill("1");
-  await card.getByRole("button", { name: "Купить сейчас" }).click();
+  await expect(page.getByRole("button", { name: "Купить сейчас" })).toHaveCount(
+    0,
+  );
   await page.getByLabel("Имя", { exact: true }).fill("Price Buyer");
   await page.getByLabel("Телефон", { exact: true }).fill("+79000000000");
   const sent = [];
@@ -115,6 +115,8 @@ test("buy now confirms an updated price with a new key and keeps the basket", as
   expect(sent[1].body.items[0].expected_unit_price_rub).toBe(18000);
   expect(sent[1].body.items[0].quantity).toBe(1);
   await page.getByRole("button", { name: "Вернуться к покупкам" }).click();
+  await card.getByRole("spinbutton").fill("2");
+  await card.getByRole("button", { name: "В корзину", exact: true }).click();
   await expect(page.locator(".basket").getByRole("spinbutton")).toHaveValue(
     "2",
   );
@@ -129,6 +131,18 @@ test("buy now confirms an updated price with a new key and keeps the basket", as
     page.locator(".basket").getByRole("button", { name: /^Уменьшить:/ }),
   ).toBeDisabled();
   await page.locator(".basket").getByRole("spinbutton").fill("10000");
+  const stock = await page.evaluate(async () => {
+    const response = await fetch(
+      "/api/products/00000000-0000-4000-8000-000000000000",
+    );
+    return (await response.json()).stock;
+  });
+  await expect(page.locator(".basket").getByRole("spinbutton")).toHaveValue(
+    String(stock),
+  );
+  await expect(
+    card.getByRole("button", { name: "В корзину", exact: true }),
+  ).toBeDisabled();
   await expect(
     page.locator(".basket").getByRole("button", { name: /^Увеличить:/ }),
   ).toBeDisabled();

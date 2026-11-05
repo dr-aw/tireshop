@@ -62,6 +62,20 @@ test("administrator edits stock and request, dispatches once and retains history
   await page
     .getByRole("combobox", { name: "Статус", exact: true })
     .selectOption("delivery");
+  await expect(editor).toContainText("На складе: 8");
+  await page
+    .getByRole("spinbutton", { name: "Количество: Browser synthetic tyre" })
+    .fill("9");
+  await expect(
+    page.getByRole("button", { name: "Сохранить заявку" }),
+  ).toBeDisabled();
+  await expect(editor).toContainText("недостаточно для отправки");
+  await page
+    .getByRole("spinbutton", { name: "Количество: Browser synthetic tyre" })
+    .fill("3");
+  await expect(
+    page.getByRole("button", { name: "Сохранить заявку" }),
+  ).toBeEnabled();
   await page
     .getByLabel("Комментарий сотрудника", { exact: false })
     .fill("Передано курьеру");

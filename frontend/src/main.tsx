@@ -24,6 +24,7 @@ type Product = {
   available: boolean;
 };
 type Line = {
+  stock?: number;
   image_url?: string;
   unit_label?: string;
   product_id: string;
@@ -96,11 +97,13 @@ function QuantityControl({
   disabled,
   label,
   onChange,
+  max = 10000,
 }: {
   value: number;
   disabled: boolean;
   label: string;
   onChange: (value: number) => void;
+  max?: number;
 }) {
   return (
     <div className="stepper" role="group" aria-label={label}>
@@ -116,23 +119,20 @@ function QuantityControl({
         aria-label={label}
         type="number"
         min="1"
-        max="10000"
+        max={max}
         step="1"
         value={value}
         disabled={disabled}
         onChange={(e) =>
           onChange(
-            Math.max(
-              1,
-              Math.min(10000, Math.trunc(Number(e.target.value)) || 1),
-            ),
+            Math.max(1, Math.min(max, Math.trunc(Number(e.target.value)) || 1)),
           )
         }
       />
       <button
         type="button"
         aria-label={`Увеличить: ${label}`}
-        disabled={disabled || value >= 10000}
+        disabled={disabled || value >= max}
         onClick={() => onChange(value + 1)}
       >
         +
@@ -296,6 +296,44 @@ function App() {
     return () => controller.abort();
   }, [productID, catalogQuery]);
 
+  const cartIDs = cart.map((line) => line.product_id).join(",");
+  useEffect(() => {
+    if (!cartIDs) return;
+    const controller = new AbortController();
+    const refresh = async () => {
+      const stocks = await Promise.all(
+        cartIDs.split(",").map(async (id) => {
+          try {
+            const response = await fetch(
+              "/api/products/" + encodeURIComponent(id),
+              { signal: controller.signal },
+            );
+            if (!response.ok) return [id, 0] as const;
+            const product: Product = await response.json();
+            return [id, product.available ? (product.stock ?? 0) : 0] as const;
+          } catch {
+            return [id, 0] as const;
+          }
+        }),
+      );
+      if (!controller.signal.aborted) {
+        const remaining = new Map(stocks);
+        setCart((old) =>
+          old.map((line) => ({
+            ...line,
+            stock: remaining.get(line.product_id) ?? line.stock,
+          })),
+        );
+      }
+    };
+    void refresh();
+    window.addEventListener("focus", refresh);
+    return () => {
+      controller.abort();
+      window.removeEventListener("focus", refresh);
+    };
+  }, [cartIDs]);
+
   function persist(value: Saved) {
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(value));
@@ -401,9 +439,11 @@ function App() {
     });
   }
 
-  function add(p: Product, buyNow: boolean) {
+  function add(p: Product) {
+    if (!p.available || !p.stock) return;
     const line = {
       product_id: p.id,
+      stock: p.stock,
       name: p.name,
       quantity: quantities[p.id] || 1,
       unit_price_rub: p.unit_price_rub,
@@ -412,25 +452,18 @@ function App() {
     };
     setReceipt("");
     setMessage("");
-    if (buyNow) {
-      setQuick([line]);
-      document
-        .getElementById("checkout")
-        ?.scrollIntoView({ behavior: "smooth" });
-    } else {
-      setQuick(null);
-      setCart((old) => [
-        ...old.filter((l) => l.product_id !== p.id),
-        {
-          ...line,
-          quantity: Math.min(
-            10000,
-            line.quantity +
-              (old.find((l) => l.product_id === p.id)?.quantity || 0),
-          ),
-        },
-      ]);
-    }
+    setQuick(null);
+    setCart((old) => [
+      ...old.filter((l) => l.product_id !== p.id),
+      {
+        ...line,
+        quantity: Math.min(
+          p.stock ?? 0,
+          line.quantity +
+            (old.find((l) => l.product_id === p.id)?.quantity || 0),
+        ),
+      },
+    ]);
   }
 
   function edit() {
@@ -454,7 +487,20 @@ function App() {
     if (locked) return;
     const update = (lines: Line[]) =>
       lines.map((line) =>
-        line.product_id === id ? { ...line, quantity } : line,
+        line.product_id === id
+          ? {
+              ...line,
+              quantity: Math.max(
+                1,
+                Math.min(
+                  quantity,
+                  line.stock ??
+                    products.find((p) => p.id === id)?.stock ??
+                    line.quantity,
+                ),
+              ),
+            }
+          : line,
       );
     if (quick) setQuick((previous) => (previous ? update(previous) : null));
     else setCart(update);
@@ -512,9 +558,12 @@ function App() {
               setQuantity={(n) =>
                 setQuantities((q) => ({ ...q, [productID]: n }))
               }
-              add={() => add(products[0], false)}
-              buy={() => add(products[0], true)}
-              locked={locked}
+              add={() => add(products[0])}
+              locked={
+                locked ||
+                (cart.find((l) => l.product_id === productID)?.quantity || 0) >=
+                  (products[0].stock ?? 0)
+              }
               fallback={<Wheel rim={products[0].details?.kind === "wheel"} />}
             />
           ) : (
@@ -751,6 +800,12 @@ function App() {
                         <ProductSpecifications details={p.details} />
                         <div className="purchase-row">
                           <QuantityControl
+                            max={Math.max(
+                              0,
+                              (p.stock ?? 0) -
+                                (cart.find((l) => l.product_id === p.id)
+                                  ?.quantity || 0),
+                            )}
                             value={quantities[p.id] || 1}
                             disabled={locked}
                             label={`Количество: ${productName(p.name)}`}
@@ -763,19 +818,18 @@ function App() {
                           />
                           <button
                             className="add-button"
-                            disabled={locked}
-                            onClick={() => add(p, false)}
+                            disabled={
+                              locked ||
+                              !p.available ||
+                              !p.stock ||
+                              (cart.find((l) => l.product_id === p.id)
+                                ?.quantity || 0) >= p.stock
+                            }
+                            onClick={() => add(p)}
                           >
                             В корзину
                           </button>
                         </div>
-                        <button
-                          className="buy-now"
-                          disabled={locked}
-                          onClick={() => add(p, true)}
-                        >
-                          Купить сейчас <span aria-hidden="true">↗</span>
-                        </button>
                       </div>
                     </article>
                   ))}
@@ -887,10 +941,19 @@ function App() {
                           </a>
                           <span>
                             {rub(l.unit_price_rub)} / {l.unit_label || "шт."}
+                            <br />
+                            На складе: {l.stock ?? "уточняем"}{" "}
+                            {l.unit_label || "шт."}
                           </span>
                         </div>
                         <div className="basket-actions">
                           <QuantityControl
+                            max={
+                              l.stock ??
+                              products.find((p) => p.id === l.product_id)
+                                ?.stock ??
+                              l.quantity
+                            }
                             value={l.quantity}
                             disabled={locked}
                             label={`В корзине: ${productName(l.name)}`}

@@ -696,6 +696,19 @@ function RequestEditor({
   const [comment, setComment] = useState("");
   const [add, setAdd] = useState("");
   const editable = r.status === "created";
+  const stockBlocked =
+    editable &&
+    status === "delivery" &&
+    items.some((item) => {
+      const p = products.find((p) => p.id === item.product_id);
+      return (
+        !p ||
+        !p.available ||
+        !Number.isSafeInteger(item.quantity) ||
+        item.quantity < 1 ||
+        item.quantity > p.stock
+      );
+    });
   const allowed = [
     r.status,
     ...(r.status === "created"
@@ -718,6 +731,7 @@ function RequestEditor({
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          if (stockBlocked) return;
           save({
             version: r.version,
             status,
@@ -748,6 +762,17 @@ function RequestEditor({
                 </a>
                 <small>
                   {money(item.unit_price_rub)} / {item.unit_label || "шт."}
+                  <br />
+                  На складе:{" "}
+                  {products.find((p) => p.id === item.product_id)?.stock ??
+                    "неизвестно"}{" "}
+                  {item.unit_label || "шт."}
+                  {editable &&
+                    item.quantity >
+                      (products.find((p) => p.id === item.product_id)?.stock ??
+                        0) && (
+                      <span role="status"> — недостаточно для отправки</span>
+                    )}
                 </small>
               </div>
               <label>
@@ -852,10 +877,9 @@ function RequestEditor({
               ))}
             </select>
           </label>
-          {status === "delivery" && editable && (
+          {stockBlocked && (
             <p className="admin-notice">
-              При сохранении все позиции будут списаны со склада. При нехватке
-              хотя бы одной позиции изменения не сохранятся.
+              Отправка недоступна: проверьте количество и остатки позиций.
             </p>
           )}
           {status === "cancelled" && (
@@ -874,7 +898,10 @@ function RequestEditor({
             />
           </label>
           <div className="admin-actions">
-            <button className="admin-primary" disabled={items.length === 0}>
+            <button
+              className="admin-primary"
+              disabled={items.length === 0 || stockBlocked}
+            >
               Сохранить заявку
             </button>
             <button type="button" onClick={close}>
