@@ -25,6 +25,15 @@ variable "deploy_services" {
   type    = bool
   default = false
 }
+variable "requests_service_url" {
+  description = "Public HTTPS requests service base URL for catalog session validation."
+  type        = string
+  default     = ""
+  validation {
+    condition     = var.requests_service_url == "" || can(regex("^https://[a-z0-9.-]+\\.run\\.app$", var.requests_service_url))
+    error_message = "Use the HTTPS requests run.app URL without a trailing slash."
+  }
+}
 variable "images" {
   description = "Artifact Registry image references pinned by sha256, keyed by catalog and requests."
   type        = map(string)
@@ -110,7 +119,7 @@ resource "google_cloud_run_v2_service" "api" {
         startup_cpu_boost = true
       }
       dynamic "env" {
-        for_each = {
+        for_each = merge({
           APP_ENV                            = "production"
           HTTP_ADDR                          = "0.0.0.0:10000"
           PGHOST                             = "pg-2f7b3aad-snorchello-5783.g.aivencloud.com"
@@ -121,7 +130,9 @@ resource "google_cloud_run_v2_service" "api" {
           PGPOOL_MAX_CONNS                   = "4"
           APP_ORIGINS                        = "https://tireshop-3x8p.onrender.com"
           "${upper(each.key)}_PASSWORD_FILE" = "/etc/tireshop-password/password"
-        }
+          }, each.key == "catalog" && var.requests_service_url != "" ? {
+          ADMIN_SESSION_URL = "${var.requests_service_url}/api/admin/session"
+        } : {})
         content {
           name  = env.key
           value = env.value
