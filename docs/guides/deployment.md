@@ -1,5 +1,9 @@
 # CI и публикация на Render
 
+Обновление 2026-11-05: frontend остаётся на Render; API размещаются в Cloud Run.
+Актуальный порядок backend deployment и секретов — [запуск GCP](gcp.md).
+Инструкции ниже о Render Web Service для API описывают предыдущий вариант.
+
 [Краткий запуск и архитектура](../../README.md)
 
 ## CI в GitHub и публикация на Render

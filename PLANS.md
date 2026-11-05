@@ -6,6 +6,14 @@
 
 ## Где мы сейчас
 
+Изменение среды 2026-11-05: подключить внешний CA Aiven только к человеческому
+dev container через отдельный Compose override и read-only mount. Agent и локальная
+БД сохраняют текущую конфигурацию. Проверка: Compose config, доступность файла
+в dev и отсутствие mount в agent; без подключения к удалённой БД.
+Выполнено: override подключён в devcontainer.json, dev пересоздан; Compose config
+проходит, файл читается пользователем dev, mount read-only и отсутствует в agent.
+Удалённое подключение и повторное открытие VS Code не проверялись.
+
 - Работает Linux-окружение с toolchain по lockfile и агентом; подключение через
   VS Code подтверждено пользователем. PostgreSQL и сохранность данных после
   пересоздания проверены. Локальный пароль передаётся через Compose secrets.
@@ -232,6 +240,85 @@ HTML заказчика — ориентир, фото готовятся в Web
 с ним сам. Онлайн-оплата и автоматический резерв отсутствуют.
 
 ## Подготовка публикации и CI/CD
+
+Исправление dev container: пользователь обнаружил missing для всего toolchain.
+В dev отсутствовала автоматическая установка, в отличие от agent. Добавить
+postCreate установку по lockfile и reshim, проверить конфигурацию и запуск Go
+через shims. Пересоздание контейнера через VS Code проверяет пользователь.
+Реализовано: setup-dev.sh подключён к postCreateCommand. В текущей среде
+скрипт выполнен успешно с уже установленными инструментами; Go/goose через
+shims работают. Bash syntax, JSON, Markdown и diff check прошли. Установка
+с пустого dev filesystem и перезапуск расширения Go ещё не проверены.
+
+Этап bootstrap Aiven 2026-11-05: пользователь подтвердил CREATEROLE/CREATEDB,
+без superuser, схемы приложения отсутствуют. Подготовить одноразовый
+транзакционный SQL bootstrap без паролей, отдельный LOGIN мигратора и ручной
+runner goose с TLS verify-full. Проверить на новой local test DB с владельцем
+CREATEROLE/CREATEDB без superuser, включая запрет runtime DDL и чужой записи;
+уточнить, что права CREATE в существующей defaultdb также необходимы.
+Внешняя БД и production secrets из agent не используются.
+
+Подготовлены deploy/aiven/bootstrap.sql и scripts/aiven-migrate.sh. Тест
+test:bootstrap прошёл на local PostgreSQL: non-superuser владелец БД создаёт
+роли/схемы, отдельный migration LOGIN применяет миграции до catalog 4 / requests 3,
+повторный up сохраняет версии; runtime не получает DDL и чужие таблицы.
+Bootstrap также требует прав владельца существующей БД для ограничения PUBLIC.
+Проверка добавлена в CI, применение Aiven выполняет пользователь вручную.
+
+Пользователь подтвердил применение bootstrap в Aiven: в defaultdb есть обе
+схемы с владельцем defaultdb_migrator и все шесть ролей. Пароли трёх LOGIN
+заданы пользователем. Следующий шаг — ручное применение миграций до catalog 4
+и requests 3; применение ещё не подтверждено. Агент к Aiven не подключался.
+
+Этап 2026-11-05: подготовить runtime и Terraform для Cloud Run, без apply.
+Входные параметры Aiven получены: host/port и defaultdb, подключение DBeaver
+подтверждено пользователем. Шаги: явный production mode с TLS verify-full и
+файлами секретов; ограничение соединений; локальные проверки TLS/dev regression;
+Terraform сначала создаёт registry, service accounts и пустые secrets, затем
+по выбранным digest разворачивает API. Значения secrets вводит пользователь
+в GCP вне Terraform, CI и среды агента; миграции остаются ручными.
+Проверка: test/lint/build/browser на local test DB и terraform fmt/validate
+без Google credentials. Удалённые схемы/роли Aiven и реальный rollout не проверены.
+
+Подготовлено: runtime APP_ENV=production, CA/пароль из файлов, обязательный
+verify-full и HTTPS origins, pool 4; Terraform foundation/deployment в два этапа,
+mock tests и задача infra:check в CI. Test/race, lint, build, test:browser,
+TLS handshake/hostname checks, terraform fmt/validate и три mock plans прошли.
+Инструкция — [запуск GCP](docs/guides/gcp.md). Нужны новый CI image и проверка
+прав Aiven перед bootstrap/миграциями; apply и внешних DB соединений не было.
+
+Параметры стенда от пользователя, 2026-11-05:
+frontend `https://tireshop-3x8p.onrender.com`, проект GCP `tireshop-513806`,
+Aiven PostgreSQL 18.6 в Сингапуре. Предлагаемый регион Cloud Run —
+`asia-southeast1`, рядом с БД; это не подтверждает частную сеть между облаками.
+Production credentials агенту не передаются. До Cloud Run требуется новая сборка
+runtime с внешними host/user/database, CA и TLS verify-full; существующий
+runtime по-прежнему жёстко ограничен локальной dev/test PostgreSQL.
+
+- [ ] Перед публичным продвижением перевести витрину с клиентского рендеринга
+      на выдачу содержательного HTML: каталог и карточки товаров должны иметь
+      название, характеристики, описание и ссылки без выполнения JavaScript.
+      Админка может остаться SPA. Отдельно выбрать SSG, SSR или сочетание:
+      учесть обновления цен/остатков, публикацию каталога и стоимость хостинга;
+      оформить ADR и этап реализации до смены стека. Предусмотреть уникальные
+      title/description, canonical, sitemap, robots и корректные HTTP 404.
+      Проверить исходный HTTP HTML и навигацию без JS, актуальность данных,
+      индексацию фильтров/пагинации и сохранение интерактивной корзины.
+      Оформление заказа всегда повторно проверяет цену/наличие на backend.
+
+- [ ] Настроить SPA rewrites в Render для прямого входа/reload `/administrator`
+      и `/products/*`; проверить отдельно от доступности backend.
+- [ ] Добавить оформленную страницу 404 и явное распознавание неизвестных путей
+      frontend (сейчас общий fallback рендерит магазин). Определить выдачу
+      HTTP 404 статическим хостингом и поведение отсутствующего товара;
+      отсутствующие API/media не должны подменяться HTML со статусом 200.
+      Проверить прямой вход, reload, неизвестный URL и ссылки возврата.
+
+Уточнение 2026-10-31: пользователь подтвердил появление двух Go packages в GHCR.
+Далее frontend на Render Static Site и подготовка Aiven вручную; размещение API
+предлагается на Cloud Run в GCP, Terraform — следующим этапом после подготовки
+runtime/TLS и схемы БД. Ранее описанный Render Web Service для API теперь вариант,
+а не выбранная цель. Секреты остаются вне GitHub CI, frontend и среды агента.
 
 Исправление CI 2026-10-31: Go build падает с VCS status 128. Такое же сообщение
 воспроизведено локально при эмуляции отличающегося владельца Git checkout.

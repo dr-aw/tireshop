@@ -1,12 +1,12 @@
 {
   "name": "tireshop-dev",
-  "dockerComposeFile": "../compose.yaml",
+  "dockerComposeFile": ["../compose.yaml", "../compose.dev-ca.yaml"],
   "service": "dev",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
   "remoteUser": "vscode",
   "forwardPorts": [5173],
-  "postCreateCommand": "git config --local core.hooksPath .githooks",
+  "postCreateCommand": "bash .devcontainer/setup-dev.sh",
   "customizations": {
     "vscode": {
       "extensions": [

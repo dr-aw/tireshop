@@ -28,3 +28,12 @@ test-results/
 /frontend/public/media/
 .rumdl_cache
 *.swp
+
+# Terraform local state and operator configuration (never application credentials).
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log

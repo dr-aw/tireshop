@@ -16,7 +16,7 @@
 | mise | Версии инструментов в `mise.toml`/`mise.lock`, команды проекта |
 | Docker Compose | Локальная PostgreSQL и Linux dev container |
 | GitHub Actions + GHCR | Проверки и публикация образов двух API |
-| Render + Aiven | Планируемый хостинг frontend/API и PostgreSQL |
+| Render + Cloud Run + Aiven | Статика, два API и PostgreSQL соответственно |
 
 Каждый API запускается независимо и изменяет только свои данные. Для проверки
 цены заявки читают ограниченное SQL-представление каталога. Backend проверяет
@@ -72,16 +72,16 @@ mise run test:browser
    в GHCR с тегом SHA и digest. В `dev` Actions пока не запускается.
 2. Миграции Aiven выполняются вручную через goose: сначала каталог, затем заявки.
    После успешных миграций обновляются API и frontend выбранного commit.
-3. Render API: два Web Service из образов GHCR. Frontend: Static Site из `main`,
+3. API: два Cloud Run service через Terraform. Frontend: Render Static Site из `main`,
    Build Command `bash scripts/render-static-build.sh`, Publish Directory
    `frontend/dist`. Автодеплой пока выключен.
-4. Секреты БД — только в соответствующем API на Render через Secret Files;
+4. Секреты БД — только в соответствующем API через Google Secret Manager;
    в GitHub для текущего CI достаточно автоматического `GITHUB_TOKEN`.
    Frontend не получает паролей. Подключение Aiven должно проверять TLS и CA.
 
-**Production ещё не готов:** runtime пока ограничен локальной БД; подключение
-Aiven и доставка фотографий, исключённых из Git, требуют подготовки.
-[Настройка секретов, Render и ручной релиз](docs/guides/deployment.md).
+**Production ещё не проверен:** runtime поддерживает TLS к Aiven, но роли,
+миграции, реальные подключения и доставка фотографий требуют подготовки.
+[Terraform, секреты и запуск GCP](docs/guides/gcp.md).
 
 [Текущий план](PLANS.md) · [Правила работы](AGENTS.md) ·
 [Подробности окружения](docs/guides/environment.md)

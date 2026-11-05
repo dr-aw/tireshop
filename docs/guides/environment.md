@@ -46,6 +46,21 @@ bootstrap, а не вход в аккаунт и не доступность м�
 
 ## Git: hooks и авторство
 
+При создании dev container через VS Code `postCreateCommand` запускает
+`.devcontainer/setup-dev.sh`: установку `mise install --locked`, обновление
+shims и настройку Git hooks. У dev нет отдельного volume для toolchain;
+после пересоздания инструменты устанавливаются заново. Обычный restart
+сохраняет установленные файлы. При запуске dev только через Compose или для
+восстановления текущего контейнера выполнить внутри него:
+
+```bash
+bash .devcontainer/setup-dev.sh
+```
+
+После установки перезагрузить окно VS Code командой `Developer: Reload Window`,
+если расширение Go было запущено до появления инструментов. PATH образа уже
+содержит mise shims; добавлять пути с конкретными версиями Go не требуется.
+
 Проект использует `.githooks/pre-commit` и `.pre-commit-config.yaml`.
 Hadolint отключён для этого проекта; глобальная конфигурация хоста не меняется.
 Проверяются размеры файлов, YAML/JSON5, маркеры конфликтов, окончания строк,
@@ -134,6 +149,22 @@ docker compose -f compose.yaml -f compose.agent.yaml stop agent
 данных runtime/VM может их уничтожить.
 
 ## Работа с VS Code и ограничения
+
+Dev Container использует `compose.dev-ca.yaml`: внешний CA Aiven монтируется
+read-only из `../tireshop-secrets/ca.pem` в `/etc/tireshop-ca/ca.pem` только у dev.
+Путь на хосте можно изменить через `AIVEN_CA_PATH` в `.env`; файл должен существовать.
+CA не добавляется в image или системное хранилище доверия. Базовый Compose
+и agent этого mount не содержат. После изменения выполнить в VS Code
+`Dev Containers: Rebuild Container`.
+
+Для ручного подключения из терминала dev используйте параметры отдельной команды:
+
+```bash
+psql "host=<Aiven-host> port=<Aiven-port> dbname=<database> user=<user> sslmode=verify-full sslrootcert=/etc/tireshop-ca/ca.pem" -W
+```
+
+Это инструкция для пользователя; агент не подключается к удалённой БД.
+Глобальные PGHOST/PGDATABASE и настройки локальных задач не меняются.
 
 Текущий `Reopen in Container` по-прежнему открывает человеческий сервис `dev`.
 Agent запускается приведёнными командами с Mac; код виден в открытом редакторе.

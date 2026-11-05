@@ -6,6 +6,7 @@ codex = "0.163.0"
 prek = "0.5.5"
 gitleaks = "8.30.0"
 rumdl = "0.1.22"
+terraform = "1.13.5"
 "aqua:pressly/goose" = "3.29.0"
 "npm:vite" = "8.3.5"
 "npm:typescript" = "7.0.2"
@@ -86,3 +87,16 @@ run = "TIRESHOP_BROWSER_TEST=1 bash scripts/test-db.sh"
 [tasks."frontend:build"]
 description = "Typecheck and build static frontend without Go or database access"
 run = "tsc -p frontend && vite build frontend"
+
+[tasks."infra:check"]
+description = "Validate Terraform and run mocked plans without cloud credentials"
+run = '''
+terraform -chdir=deploy/terraform fmt -check -recursive
+terraform -chdir=deploy/terraform init -backend=false -input=false -lockfile=readonly
+terraform -chdir=deploy/terraform validate
+terraform -chdir=deploy/terraform test -no-color
+'''
+
+[tasks."test:bootstrap"]
+description = "Verify production bootstrap on a disposable local DB without superuser rights"
+run = "bash scripts/test-production-bootstrap.sh"

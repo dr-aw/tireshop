@@ -2,6 +2,15 @@
 
 Дата: 2026-10-29. Статус: CI подготовлен локально; запуск GitHub ещё не проверен.
 
+Обновление 2026-11-05: пользователь подтвердил публикацию обоих GHCR packages.
+Frontend проверен HTTP (главная и /administrator — 200, общий SPA HTML).
+Подготовлены production runtime с обязательным verify-full и Terraform Cloud Run
+для проекта tireshop-513806; инструкция — [GCP](../guides/gcp.md).
+Локально прошли test/race, lint, build и PostgreSQL/browser; TLS-тест проверяет
+успешный handshake с доверенным CA и отказ неверному hostname. Terraform
+fmt/validate и три mock plan tests прошли без credentials и apply.
+Реальное подключение Aiven, bootstrap/миграции и rollout ещё не проверены.
+
 ## Актуальное уточнение: Render и ручные миграции
 
 Пользователь выбрал подготовку CI под Render + Aiven. Разделы Northflank ниже

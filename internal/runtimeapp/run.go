@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -28,28 +27,10 @@ func Run(service string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	database := env("PGDATABASE", "tireshop_dev")
-	if database != "tireshop_dev" && !regexp.MustCompile(`^tireshop_test_[a-f0-9]{16}$`).MatchString(database) {
-		return errors.New("this development setup only permits local dev/test databases")
-	}
-	passwordPath := env(strings.ToUpper(service)+"_PASSWORD_FILE", "/run/secrets/"+service+"_password")
-	password, err := os.ReadFile(passwordPath)
-	if err != nil || len(strings.TrimSpace(string(password))) == 0 {
-		return errors.New("runtime password file missing or empty; provision Compose secrets first")
-	}
-
-	// Configure a pool
-	config, err := pgxpool.ParseConfig("host=postgres port=5432 sslmode=disable")
+	config, err := databaseConfig(service)
 	if err != nil {
-		return errors.New("invalid database configuration")
+		return err
 	}
-	config.ConnConfig.Database = database
-	config.ConnConfig.User = database + "_" + service + "_login"
-	config.ConnConfig.Password = strings.TrimSpace(string(password))
-	config.ConnConfig.RuntimeParams = map[string]string{"application_name": "tireshop-" + service}
-	config.ConnConfig.ConnectTimeout = 3 * time.Second
-	config.MaxConns = 8
-	config.MaxConnIdleTime = 5 * time.Minute
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return errors.New("could not configure database pool")
@@ -60,7 +41,7 @@ func Run(service string) error {
 	err = pool.QueryRow(checkCtx, "SELECT current_user").Scan(&current)
 	cancel()
 	if err != nil || current != config.ConnConfig.User {
-		return errors.New("runtime database login failed; run db:runtime after mounting secrets")
+		return errors.New("runtime database login failed; check configuration, credentials and migrations")
 	}
 	var handler http.Handler
 	addr := "127.0.0.1:8081"

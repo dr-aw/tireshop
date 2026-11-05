@@ -1,0 +1,9 @@
+services:
+  dev:
+    volumes:
+      - type: bind
+        source: ${AIVEN_CA_PATH:-../tireshop-secrets/ca.pem}
+        target: /etc/tireshop-ca/ca.pem
+        read_only: true
+        bind:
+          create_host_path: false

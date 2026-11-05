@@ -60,7 +60,11 @@ jobs:
           mise exec -- rumdl check .
           mise run build
       - name: PostgreSQL migrations, integration and browser tests
-        run: mise run test:browser
+        run: |
+          mise run test:bootstrap
+          mise run test:browser
+      - name: Validate infrastructure without cloud credentials
+        run: mise run infra:check
       - name: Build portable Linux executables
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 mise exec -- go build -trimpath -o build/catalog ./cmd/catalog
