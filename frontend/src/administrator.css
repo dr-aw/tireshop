@@ -435,3 +435,86 @@
 .administrator tr.admin-hidden-product .admin-thumbnail {
   filter: grayscale(1);
 }
+
+.administrator .admin-stock-shortage {
+  color: #b42318;
+  font-weight: 700;
+}
+.administrator .admin-add {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+  align-items: end;
+}
+.administrator .admin-add label {
+  min-width: 0;
+  margin: 0;
+}
+.administrator .admin-add button {
+  width: 100%;
+  min-height: 42px;
+}
+.administrator input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.administrator input[type="number"]::-webkit-inner-spin-button,
+.administrator input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.administrator .admin-filter-panel {
+  padding: 20px;
+}
+.administrator .admin-filter-panel .filter-fields {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px 16px;
+  align-items: end;
+  padding: 12px 0 4px;
+}
+.administrator .admin-filter-panel .filter-fields > label,
+.administrator .admin-filter-panel .filter-range {
+  grid-column: span 3;
+  margin: 0;
+  min-width: 0;
+}
+.administrator .admin-filter-panel .filter-fields > .filter-condition,
+.administrator .admin-filter-panel .filter-fields > .filter-production_year {
+  grid-column: span 2;
+}
+.administrator .admin-filter-panel .filter-fields > .filter-price {
+  grid-column: span 4;
+}
+.administrator .admin-filter-panel legend {
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.administrator .admin-filter-panel input:not([type="checkbox"]),
+.administrator .admin-filter-panel select {
+  height: 42px;
+}
+.administrator .admin-filter-panel .filter-checkbox {
+  flex-direction: row;
+  align-items: center;
+  min-height: 42px;
+  padding: 0;
+}
+.administrator .admin-field-production_year {
+  max-width: 140px;
+}
+.administrator .admin-field-condition {
+  max-width: 220px;
+}
+@media (max-width: 700px) {
+  .administrator .admin-filter-panel .filter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .administrator .admin-filter-panel .filter-fields > label,
+  .administrator .admin-filter-panel .filter-fields > .filter-range {
+    grid-column: span 1;
+  }
+  .administrator .admin-filter-panel .filter-fields > .filter-price {
+    grid-column: 1 / -1;
+  }
+}

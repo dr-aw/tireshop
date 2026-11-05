@@ -75,6 +75,7 @@ class APIError extends Error {
   constructor(
     message: string,
     public status: number,
+    public code?: string,
   ) {
     super(message);
   }
@@ -95,6 +96,7 @@ async function api<T>(
     throw new APIError(
       data.error?.message || "Не удалось выполнить запрос",
       response.status,
+      data.error?.code,
     );
   return data;
 }
@@ -233,7 +235,17 @@ export function Administrator() {
     });
   }
   return (
-    <div className="administrator">
+    <div
+      className="administrator"
+      onWheelCapture={(e) => {
+        if (
+          e.target instanceof HTMLInputElement &&
+          e.target.type === "number" &&
+          document.activeElement === e.target
+        )
+          e.target.blur();
+      }}
+    >
       <header className="admin-header">
         <a href="/">
           tire<span>shop</span>
@@ -550,7 +562,23 @@ export function Administrator() {
                 close={() => setDetail(null)}
                 save={(body) =>
                   void run(async () => {
-                    await api(`requests/${detail.request.id}`, "PUT", body);
+                    try {
+                      await api(`requests/${detail.request.id}`, "PUT", body);
+                    } catch (error) {
+                      if (
+                        error instanceof APIError &&
+                        error.code === "insufficient_stock"
+                      ) {
+                        try {
+                          await openRequest(detail.request.id);
+                        } catch {
+                          throw new Error(
+                            `${error.message} Не удалось обновить остатки. Откройте заявку заново.`,
+                          );
+                        }
+                      }
+                      throw error;
+                    }
                     await openRequest(detail.request.id);
                     await load("requests", offset);
                     setNotice("Заявка сохранена");
@@ -771,7 +799,10 @@ function RequestEditor({
                     item.quantity >
                       (products.find((p) => p.id === item.product_id)?.stock ??
                         0) && (
-                      <span role="status"> — недостаточно для отправки</span>
+                      <span className="admin-stock-shortage" role="status">
+                        {" "}
+                        — недостаточно для отправки
+                      </span>
                     )}
                 </small>
               </div>

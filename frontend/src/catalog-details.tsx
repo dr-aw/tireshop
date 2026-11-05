@@ -317,7 +317,7 @@ export function DetailsEditor({
               !["tyre_width", "aspect_ratio", "rim_diameter"].includes(key),
           )
           .map(([key, label, numeric]) => (
-            <label key={key}>
+            <label key={key} className={`admin-field-${key}`}>
               {label}
               <input
                 type={numeric ? "number" : "text"}
