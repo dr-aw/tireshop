@@ -44,12 +44,19 @@ State — учёт созданных ресурсов, его нужно сох
 
 ```bash
 gcloud config set project tireshop-513806
+gcloud services enable cloudresourcemanager.googleapis.com serviceusage.googleapis.com \
+  --project=tireshop-513806
 umask 077
 mise exec -- terraform -chdir=deploy/terraform init
 mise exec -- terraform -chdir=deploy/terraform validate
 mise exec -- terraform -chdir=deploy/terraform plan -out=foundation.tfplan
 mise exec -- terraform -chdir=deploy/terraform apply foundation.tfplan
 ```
+
+Cloud Resource Manager и Service Usage включаются как начальные зависимости
+до Terraform. При SERVICE_DISABLED сразу после включения подождать несколько
+минут. После неуспешного apply заново выполнить plan и применить новый план:
+часть API могла уже включиться. State сохранять, вручную ресурсы не удалять.
 
 Нужны привязанный billing account и права создавать ресурсы/API/IAM. Ошибку
 permissions разбирать по конкретной операции, не выдавать runtime account Owner.
@@ -126,14 +133,17 @@ images = {
 ```
 
 ```bash
-mise exec -- terraform -chdir=deploy/terraform plan -out=release.tfplan
+mise exec -- terraform -chdir=deploy/terraform plan -var-file=production.tfvars -out=release.tfplan
 mise exec -- terraform -chdir=deploy/terraform apply release.tfplan
 mise exec -- terraform -chdir=deploy/terraform output service_urls
 ```
 
 Cloud Run: request-based CPU, минимум 0, максимум 2 экземпляра в ревизии,
-512 MiB памяти. При простое возможен холодный старт. Startup проверяет /readyz,
-liveness /healthz не зависит от доступности БД. Неудачный startup из-за схемы,
+512 MiB памяти. При простое возможен холодный старт. Startup проверяет /ready,
+liveness /health не зависит от доступности БД. Cloud Run резервирует некоторые
+пути с окончанием z, поэтому старые /healthz и /readyz не использовать для
+внешних проверок. Новые probes применять вместе с образами, содержащими эти
+маршруты. Неудачный startup из-за схемы,
 CA или ролей требует исправления причины, не отключения проверки сертификатов.
 Лимит экземпляров при rollout и число соединений контролировать по метрикам.
 

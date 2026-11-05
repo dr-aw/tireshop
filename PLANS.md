@@ -251,6 +251,25 @@ HTML заказчика — ориентир, фото готовятся в Web
 
 ## Подготовка публикации и CI/CD
 
+Cloud Run запущен пользователем; оба /readyz возвращают 200, /healthz — 404.
+Google резервирует некоторые URL с окончанием z. Добавить /health и /ready,
+переключить Terraform probes, сохранить прежние пути для локальных потребителей.
+Проверить Go test/lint/build и infra:check. Обновление облачных образов и
+проверка новых путей выполняются пользователем после CI.
+Реализованы новые маршруты и probes; локально test/race, lint, build,
+infra:check (три mock-теста), Markdown и diff check прошли. В облаке новые
+маршруты ещё не опубликованы; прежние readiness проверки подтверждены пользователем.
+
+Пользователь подтвердил foundation apply, перенос обоих образов в Artifact
+Registry и включённые секреты. Подготовлен следующий шаг запуска Cloud Run
+по digest. Исправлена команда release plan: production.tfvars требуется
+передавать явно через -var-file; автоматическая загрузка такого имени отсутствует.
+
+Первый foundation apply пользователя остановился: Cloud Resource Manager API
+отключён (SERVICE_DISABLED). В руководство добавлено предварительное включение
+Cloud Resource Manager/Service Usage через gcloud и повторный plan после ошибки.
+Успешное применение foundation пока не подтверждено.
+
 Исправление CI Terraform: readonly init на linux_amd64 установил провайдер,
 но validate отклонил пакет по checksum. Подготовить lockfile с h1 для обеих
 Linux архитектур через providers lock и проверить infra:check; readonly в CI

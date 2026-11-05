@@ -136,13 +136,13 @@ resource "google_cloud_run_v2_service" "api" {
         mount_path = "/etc/tireshop-ca"
       }
       startup_probe {
-        http_get { path = "/readyz" }
+        http_get { path = "/ready" }
         period_seconds    = 5
         timeout_seconds   = 2
         failure_threshold = 24
       }
       liveness_probe {
-        http_get { path = "/healthz" }
+        http_get { path = "/health" }
         period_seconds = 30
       }
     }

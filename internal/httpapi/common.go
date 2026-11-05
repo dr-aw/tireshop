@@ -41,10 +41,10 @@ func fail(w http.ResponseWriter, status int, code, message string) {
 // Health is process liveness; readiness additionally checks the service's own
 // restricted connection. Neither endpoint exposes connection settings.
 func health(mux *http.ServeMux, pool *pgxpool.Pool) {
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	live := func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok"})
-	})
-	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
+	}
+	ready := func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
 		defer cancel()
 		if pool.Ping(ctx) != nil {
@@ -52,7 +52,12 @@ func health(mux *http.ServeMux, pool *pgxpool.Pool) {
 			return
 		}
 		writeJSON(w, 200, map[string]string{"status": "ready"})
-	})
+	}
+	// Cloud Run reserves some paths ending in z. Keep aliases for local clients.
+	mux.HandleFunc("GET /health", live)
+	mux.HandleFunc("GET /ready", ready)
+	mux.HandleFunc("GET /healthz", live)
+	mux.HandleFunc("GET /readyz", ready)
 }
 
 func secure(next http.Handler) http.Handler {
