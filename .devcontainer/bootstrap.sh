@@ -5,9 +5,12 @@ cd /workspace
 rm -f /tmp/tireshop-bootstrap-ready
 test -f mise.toml
 test -f mise.lock
+test -f mise.agent.lock
+export MISE_ENV=agent
 
 # This entrypoint is for this trusted project. It never regenerates the lockfile.
 mise trust /workspace/mise.toml
+mise trust /workspace/mise.agent.toml
 mise install --locked
 mise reshim
 git config --local core.hooksPath .githooks

@@ -39,17 +39,14 @@ USER vscode
 WORKDIR /workspace
 
 # Named volumes inherit these permissions on their first mount.
-RUN mkdir -p /home/vscode/.local/share/mise /home/vscode/.codex \
-    && chmod 700 /home/vscode/.codex
+RUN mkdir -p /home/vscode/.local/share/mise
 
 ENV PATH="/home/vscode/.local/share/mise/shims:${PATH}"
 
-USER root
-COPY .devcontainer/bootstrap.sh /usr/local/bin/tireshop-bootstrap
-RUN chmod 755 /usr/local/bin/tireshop-bootstrap
-USER vscode
-
 FROM development AS agent
 USER root
-RUN rm -f /etc/sudoers.d/vscode
+COPY .devcontainer/bootstrap.sh /usr/local/bin/tireshop-bootstrap
+RUN chmod 755 /usr/local/bin/tireshop-bootstrap \
+    && rm -f /etc/sudoers.d/vscode
 USER vscode
+RUN mkdir -p /home/vscode/.codex && chmod 700 /home/vscode/.codex
