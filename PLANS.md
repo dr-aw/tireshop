@@ -277,8 +277,9 @@ Bootstrap также требует прав владельца существу
 
 Пользователь подтвердил применение bootstrap в Aiven: в defaultdb есть обе
 схемы с владельцем defaultdb_migrator и все шесть ролей. Пароли трёх LOGIN
-заданы пользователем. Следующий шаг — ручное применение миграций до catalog 4
-и requests 3; применение ещё не подтверждено. Агент к Aiven не подключался.
+заданы пользователем. Пользователь подтвердил версии миграций catalog 4 и
+requests 3 запросами под defaultdb_migrator. Следующий шаг — foundation
+Terraform без запуска API. Агент к Aiven не подключался.
 
 Этап 2026-11-05: подготовить runtime и Terraform для Cloud Run, без apply.
 Входные параметры Aiven получены: host/port и defaultdb, подключение DBeaver
