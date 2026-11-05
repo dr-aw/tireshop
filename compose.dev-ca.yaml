@@ -7,3 +7,9 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      - type: bind
+        source: ${MIGRATION_PASSWORD_PATH:-../tireshop-secrets/migration_password}
+        target: /etc/tireshop-passwords/migration_password
+        read_only: true
+        bind:
+          create_host_path: false
