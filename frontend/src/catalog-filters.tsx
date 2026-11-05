@@ -110,7 +110,7 @@ export function CatalogFilters({
   }
   function range(key: string, label: string, max: number, step = "1") {
     return (
-      <fieldset className="filter-range">
+      <fieldset className={`filter-range filter-${key}`}>
         <legend>{label}</legend>
         <div>
           <input
@@ -173,7 +173,7 @@ export function CatalogFilters({
             </label>
           )}
           {fields.map(([key, label]) => (
-            <label key={key}>
+            <label key={key} className={`filter-${key}`}>
               {label}
               <select
                 name={key}

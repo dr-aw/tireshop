@@ -28,7 +28,7 @@ func adminError(w http.ResponseWriter, err error) {
 	case errors.Is(err, postgres.ErrVersion):
 		fail(w, 409, "version_conflict", "Запись уже изменена. Обновите данные перед новой правкой")
 	case errors.Is(err, postgres.ErrStock):
-		fail(w, 409, "insufficient_stock", "Недостаточно товара на складе. Статус и остатки не изменены")
+		fail(w, 409, "insufficient_stock", "Заявка не сохранена, статус не изменён. Текущих остатков недостаточно: они могли измениться после открытия заявки. Проверьте обновлённые остатки и количество позиций.")
 	case errors.Is(err, postgres.ErrInvalidSubmission):
 		fail(w, 422, "validation_error", "Проверьте состав, статус и комментарий отмены")
 	default:

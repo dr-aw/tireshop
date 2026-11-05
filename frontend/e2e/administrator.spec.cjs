@@ -62,9 +62,69 @@ test("administrator edits stock and request, dispatches once and retains history
   await page
     .getByRole("combobox", { name: "Статус", exact: true })
     .selectOption("delivery");
+  await expect(editor).toContainText("На складе: 8");
+  const quantity = page.getByRole("spinbutton", {
+    name: "Количество: Browser synthetic tyre",
+  });
+  await quantity.focus();
+  await quantity.hover();
+  await page.mouse.wheel(0, 120);
+  await expect(quantity).toHaveValue("3");
+  const addWidths = await editor.locator(".admin-add").evaluate((node) => {
+    const label = node.querySelector("label").getBoundingClientRect().width;
+    const button = node.querySelector("button").getBoundingClientRect().width;
+    return label / button;
+  });
+  expect(addWidths).toBeCloseTo(7 / 3, 1);
+  await page
+    .getByRole("spinbutton", { name: "Количество: Browser synthetic tyre" })
+    .fill("9");
+  await expect(
+    page.getByRole("button", { name: "Сохранить заявку" }),
+  ).toBeDisabled();
+  await expect(editor).toContainText("недостаточно для отправки");
+  await expect(editor.locator(".admin-stock-shortage")).toHaveCSS(
+    "color",
+    "rgb(180, 35, 24)",
+  );
+  await page
+    .getByRole("spinbutton", { name: "Количество: Browser synthetic tyre" })
+    .fill("3");
+  await expect(
+    page.getByRole("button", { name: "Сохранить заявку" }),
+  ).toBeEnabled();
   await page
     .getByLabel("Комментарий сотрудника", { exact: false })
     .fill("Передано курьеру");
+  const conflictURL = /\/api\/admin\/requests\/[^/?]+$/;
+  const conflict = async (route) => {
+    if (route.request().method() !== "PUT") return route.fallback();
+    await route.fulfill({
+      status: 409,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "insufficient_stock",
+          message:
+            "Заявка не сохранена, статус не изменён. Остатки изменились.",
+        },
+      }),
+    });
+  };
+  await page.route(conflictURL, conflict);
+  const refreshed = page.waitForResponse((response) =>
+    response.url().includes("/api/admin/products?offset=0"),
+  );
+  await page.getByRole("button", { name: "Сохранить заявку" }).click();
+  await refreshed;
+  await expect(page.getByRole("alert")).toContainText("статус не изменён");
+  await expect(
+    page.getByLabel("Комментарий сотрудника", { exact: false }),
+  ).toHaveValue("Передано курьеру");
+  await expect(
+    page.getByRole("combobox", { name: "Статус", exact: true }),
+  ).toHaveValue("delivery");
+  await page.unroute(conflictURL, conflict);
   await page.getByRole("button", { name: "Сохранить заявку" }).click();
   await expect(
     page.getByRole("spinbutton", {

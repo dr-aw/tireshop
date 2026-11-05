@@ -253,3 +253,121 @@ SELECT version_id, is_applied FROM requests.goose_db_version ORDER BY id;
 Bootstrap и миграции проверены только на локальной PostgreSQL с синтетикой,
 под non-superuser оператором и отдельным migration LOGIN. Aiven-специфичные
 ограничения и реальное применение пользователь подтверждает отдельно.
+
+## Фото товаров в Google Storage
+
+Файл `deploy/terraform/media.tf` создаёт опциональный bucket
+`tireshop-513806-product-media`, STANDARD в регионе API, с uniform access и
+защитой от удаления Terraform. Публичная роль Object Viewer разрешает чтение
+и перечисление объектов, но не запись. Загружать только опубликованные WebP,
+не оригиналы, документы поставщиков или секреты. Runtime API пока не получает
+прав записи; загрузка новых фото через админку — отдельная будущая функция.
+Хранение, запросы и исходящий трафик оплачиваются по тарифам Cloud Storage.
+Если политика организации запрещает public access, apply IAM завершится ошибкой;
+не отключать политику организации, а отдельно выбрать способ выдачи фото.
+
+В Cloud Shell рядом с действующим main.tf/state загрузить `media.tf`.
+Добавить в существующий `production.tfvars`, сохранив images и secret_versions:
+
+```hcl
+enable_public_media = true
+```
+
+```bash
+terraform fmt -check
+terraform validate
+terraform plan -var-file=production.tfvars -out=media.tfplan
+terraform apply media.tfplan
+terraform output media_bucket
+```
+
+Ожидаются три новых ресурса: Storage API, bucket и IAM public read.
+Cloud Run не должен меняться при неизменных main.tf и параметрах.
+При следующих обновлениях сохранять media.tf и enable_public_media=true.
+
+На Mac из корня репозитория упаковать уже подготовленные изображения:
+
+```bash
+COPYFILE_DISABLE=1 tar --exclude='.DS_Store' -czf ~/Downloads/tireshop-media.tar.gz \
+  -C frontend/public media
+```
+
+Загрузить архив в домашнюю папку Cloud Shell через Upload. Затем в Cloud Shell:
+
+```bash
+mkdir -p ~/tireshop-media-upload
+tar -xzf ~/tireshop-media.tar.gz -C ~/tireshop-media-upload
+gcloud storage rsync ~/tireshop-media-upload/media \
+  gs://tireshop-513806-product-media/media --recursive --dry-run \
+  --exclude='^(?!.*\.webp$).*'
+```
+
+Просмотреть план загрузки: только WebP по ожидаемым путям media/products/...
+Повторить команду без --dry-run. Флаг удаления отсутствующих объектов не добавлять.
+Хешированные имена фото не перезаписывать другим содержимым.
+Для публичной проверки взять один точный путь из загруженных объектов и открыть:
+`https://storage.googleapis.com/tireshop-513806-product-media/media/products/...webp`.
+
+В Render Static Site добавить Rewrite:
+
+| Source | Destination | Action |
+| --- | --- | --- |
+| `/media/*` | `https://storage.googleapis.com/tireshop-513806-product-media/media/*` | Rewrite |
+
+Разместить выше общего SPA fallback, если он существует. Проверить ту же
+фотографию по `https://tireshop-3x8p.onrender.com/media/products/...webp`:
+HTTP 200, Content-Type image/webp, изображение открывается. Проверить и варианты
+1280, и 320 пикселей. В БД пути /media/... остаются прежними, CORS для обычных
+img и ключи доступа во frontend не нужны. Реальную выдачу через Render
+проверяет пользователь после загрузки. Перенос товаров выполняется отдельно.
+
+## Первый администратор магазина
+
+Миграция requests 2 уже создаёт admin_users/password_hash и admin_sessions.
+Новых миграций не нужно. Пароль магазина хранится только как Argon2id hash.
+Утилита admin-user --production фиксирует Aiven/defaultdb, verify-full и LOGIN
+мигратора, устанавливает роль defaultdb_migrator. Повторный запуск меняет пароль,
+активирует аккаунт и отзывает его прежние сессии. Runtime прав создания
+администраторов не получает.
+
+Собрать в Linux dev container (без production credentials):
+
+```bash
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 mise exec -- go build -o build/admin-user ./cmd/admin-user
+```
+
+Загрузить бинарник build/admin-user в свою доверенную admin-среду Cloud Shell.
+Туда же предоставить CA, отдельный файл пароля defaultdb_migration_login и
+отдельный файл нового пароля магазина. Файлы с паролями — вне Git, права 600;
+пароль магазина 12–1024 байта. Не вводить пароли в аргументы команд или SQL.
+Не загружать их в dev/agent container. Пример запуска в Cloud Shell:
+
+```bash
+chmod 700 ~/admin-user
+chmod 600 ~/migration-password ~/shop-admin-password
+export PGSSLROOTCERT="$HOME/ca.pem"
+export MIGRATION_PASSWORD_FILE="$HOME/migration-password"
+~/admin-user --production admin "$HOME/shop-admin-password"
+```
+
+Ожидается Account saved; previous sessions revoked. Ошибки подключения намеренно
+не содержат DSN/паролей. Агент не выполняет эту команду на Aiven.
+
+Для catalog добавить в существующий production.tfvars и применить с актуальным
+main.tf, сохранив enable_public_media/images/secret_versions:
+
+```hcl
+requests_service_url = "https://tireshop-requests-d736yvpyua-as.a.run.app"
+```
+
+```bash
+terraform plan -var-file=production.tfvars -out=admin.tfplan
+terraform apply admin.tfplan
+```
+
+Ожидается обновление catalog env ADMIN_SESSION_URL, без удаления ресурсов.
+Войти через Render /administrator, проверить список/сохранение товаров и выход.
+Перезапуск/повторное создание аккаунта отзывает прежние сессии только при
+повторном запуске admin-user, обычный restart API не сбрасывает SQL-сессии.
+После успешного создания хранить пароль магазина в password manager, временную
+копию файла удалить из Cloud Shell. Бинарник в production API image не включается.
