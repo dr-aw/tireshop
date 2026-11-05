@@ -251,6 +251,15 @@ HTML заказчика — ориентир, фото готовятся в Web
 
 ## Подготовка публикации и CI/CD
 
+Исправление CI Terraform: readonly init на linux_amd64 установил провайдер,
+но validate отклонил пакет по checksum. Подготовить lockfile с h1 для обеих
+Linux архитектур через providers lock и проверить infra:check; readonly в CI
+сохранить. Результат GitHub runner подтвердится после push пользователем.
+Добавлен официальный h1 для linux_amd64 через providers lock для двух
+платформ; версия google 7.0.0 сохранена. Локальный infra:check прошёл
+(fmt, readonly init, validate и три mock-теста), Markdown/diff check прошли.
+Процедура обновления checksums добавлена в руководство GCP.
+
 Исправление dev container: пользователь обнаружил missing для всего toolchain.
 В dev отсутствовала автоматическая установка, в отличие от agent. Добавить
 postCreate установку по lockfile и reshim, проверить конфигурацию и запуск Go

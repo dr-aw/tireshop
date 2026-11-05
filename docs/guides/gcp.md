@@ -14,6 +14,16 @@ Terraform не пересобирает приложение, не примен�
 наших secrets. Версия CLI задаётся mise.toml/mise.lock, provider закреплён
 в конфигурации и `.terraform.lock.hcl`.
 
+При обновлении провайдера внутри Linux dev container обновлять checksums обеих
+архитектур (GitHub/Cloud Shell AMD64 и локальная ARM64):
+
+```bash
+mise exec -- terraform -chdir=deploy/terraform providers lock \
+  -platform=linux_amd64 -platform=linux_arm64
+```
+
+Полученный `.terraform.lock.hcl` хранить в Git. CI использует readonly lockfile.
+
 Сначала `deploy_services=false`: создаются Artifact Registry, два service accounts,
 три пустых Secret Manager secrets и права доступа. Второй этап запускает сервисы,
 когда уже есть образы, схема/роли БД и секреты. На каждом этапе просмотреть plan.
