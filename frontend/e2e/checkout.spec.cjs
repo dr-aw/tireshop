@@ -43,7 +43,9 @@ test("lost committed response survives reload and retries the exact attempt", as
   await page
     .getByRole("button", { name: "Оформить заявку", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Ответ не получен");
+  await expect(
+    page.getByRole("status", { name: "Статус оформления заявки" }),
+  ).toContainText("Ответ не получен");
   expect(JSON.parse(original.body).items[0].quantity).toBe(2);
   await expect(plus).toBeDisabled();
   await expect(minus).toBeDisabled();
