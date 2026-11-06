@@ -1099,7 +1099,11 @@ function App() {
                   </label>
                 </fieldset>
                 {message && (
-                  <p className="notice" role="status">
+                  <p
+                    className="notice"
+                    role="status"
+                    aria-label="Статус оформления заявки"
+                  >
                     {message}
                   </p>
                 )}
