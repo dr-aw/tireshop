@@ -239,6 +239,15 @@ function App() {
       );
     }
   }, [cart]);
+  const [cartNotice, setCartNotice] = useState({ id: 0, text: "" });
+  useEffect(() => {
+    if (!cartNotice.text) return;
+    const timer = window.setTimeout(
+      () => setCartNotice((current) => ({ ...current, text: "" })),
+      3500,
+    );
+    return () => window.clearTimeout(timer);
+  }, [cartNotice]);
   const [quick, setQuick] = useState<Line[] | null>(null);
   const [attempt, setAttempt] = useState<Attempt | undefined>(
     initial.saved && "attempt" in initial.saved
@@ -446,6 +455,20 @@ function App() {
 
   function add(p: Product) {
     if (!p.available || !p.stock) return;
+    const added = Math.min(
+      quantities[p.id] || 1,
+      p.stock - (cart.find((l) => l.product_id === p.id)?.quantity || 0),
+    );
+    if (added <= 0) return;
+    setCartNotice((previous) => ({
+      id: previous.id + 1,
+      text:
+        p.name +
+        " — добавлено в корзину: " +
+        added +
+        " " +
+        (p.unit_label || "шт."),
+    }));
     const line = {
       product_id: p.id,
       stock: p.stock,
@@ -537,7 +560,10 @@ function App() {
             <a href="#how-to-order">Как заказать</a>
           </nav>
           <ThemeToggle />
-          <a className="cart-link" href="#checkout">
+          <a
+            className={"cart-link" + (cartCount > 0 ? " cart-filled" : "")}
+            href="#checkout"
+          >
             <svg
               width="20"
               height="20"
@@ -551,10 +577,44 @@ function App() {
               <circle cx="9" cy="20" r="1" />
               <circle cx="18" cy="20" r="1" />
             </svg>
-            Корзина <b>{cartCount}</b>
+            Корзина{" "}
+            <b
+              key={cartNotice.id}
+              className={cartNotice.text ? "cart-added" : ""}
+            >
+              {cartCount}
+            </b>
           </a>
         </div>
       </header>
+      <div
+        className="cart-feedback"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {cartNotice.text && (
+          <a key={cartNotice.id} href="#checkout">
+            {cartNotice.text}
+            <strong className="cart-feedback-action">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                aria-hidden="true"
+              >
+                <path d="M3 3h2l3 13h11l2-9H6" />
+                <circle cx="9" cy="20" r="1" />
+                <circle cx="18" cy="20" r="1" />
+              </svg>
+              Перейти в корзину →
+            </strong>
+          </a>
+        )}
+      </div>
       <main className="wrap">
         {productID ? (
           products[0] ? (
