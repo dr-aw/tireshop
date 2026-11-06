@@ -6,6 +6,23 @@
 
 ## Где мы сейчас
 
+Кеширование CI 2026-11-06: сохранить Go modules/build cache и глобальный Bun
+package cache через закреплённый actions/cache. Ключи: ОС/архитектура, фактические
+версии инструментов из mise и хеши go.mod/go.sum либо frontend/bun.lock;
+build cache дополнительно учитывает Go-исходники. Шаги: определить runtime paths
+в job container, восстановить кеши до установки зависимостей/тестов, описать
+restore keys и проверить YAML/shell, холодную/повторную установку Bun и Go.
+Cache hit не отменяет frozen install и проверки; сохранение — после успеха job.
+GitHub cache service проверяется только удалённым запуском после push пользователя.
+Реализовано: три отдельных кеша, runtime paths/версии, restore keys в пределах
+той же ОС/архитектуры/toolchain; zstd добавлен в prerequisites job checks.
+Локально прошли YAML formatting, shell/Markdown, выполнение шага cache-config
+с проверкой пяти outputs и 29 сценариев фильтра. Go modules загружены в новый
+кеш и повторно использованы offline; test/race internal/requests прошёл с новым
+build cache и повторно с cached result. Bun frozen install прошёл в двух новых
+каталогах: холодный и offline из общего кеша; lockfile сохранён без изменений.
+Restore/save на GitHub ещё не проверены; push не выполнялся.
+
 CI 2026-11-06: запускать проверки по затронутым файлам, без публикации Go-образов
 при изменении только frontend. Результат: отдельные проверки репозитория,
 приложения и Terraform; Dockerfile, Compose, общий toolchain и CI включают

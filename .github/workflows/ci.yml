@@ -103,7 +103,7 @@ jobs:
       - name: Install container prerequisites
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl git build-essential unzip xz-utils postgresql-client
+          apt-get install -y --no-install-recommends ca-certificates curl git build-essential unzip xz-utils zstd postgresql-client
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
@@ -115,6 +115,45 @@ jobs:
         env:
           CI_DATABASE: "true"
         run: bash .github/scripts/setup-ci.sh go bun node aqua:pressly/goose npm:vite npm:typescript npm:@playwright/test npm:prettier
+      - name: Resolve cache paths and locked tool versions
+        id: cache-config
+        run: |
+          set -euo pipefail
+          go_modules=$(go env GOMODCACHE)
+          go_build=$(go env GOCACHE)
+          go_version=$(go env GOVERSION)
+          bun_cache=$(bun pm --cwd frontend cache)
+          bun_version=$(bun --version)
+          {
+            printf 'go-modules=%s\n' "$go_modules"
+            printf 'go-build=%s\n' "$go_build"
+            printf 'go-version=%s\n' "$go_version"
+            printf 'bun-cache=%s\n' "$bun_cache"
+            printf 'bun-version=%s\n' "$bun_version"
+          } >> "$GITHUB_OUTPUT"
+      - name: Cache Go modules
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ steps.cache-config.outputs.go-modules }}
+          key: go-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-config.outputs.go-version }}-${{ hashFiles('go.mod', 'go.sum') }}
+          restore-keys: |
+            go-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-config.outputs.go-version }}-
+      - name: Cache Go compilation
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ steps.cache-config.outputs.go-build }}
+          # Cache entries are immutable: source changes need a new build key.
+          key: go-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-config.outputs.go-version }}-${{ hashFiles('go.mod', 'go.sum') }}-${{ hashFiles('cmd/**/*.go', 'internal/**/*.go') }}
+          restore-keys: |
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-config.outputs.go-version }}-${{ hashFiles('go.mod', 'go.sum') }}-
+            go-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-config.outputs.go-version }}-
+      - name: Cache Bun packages
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ steps.cache-config.outputs.bun-cache }}
+          key: bun-packages-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-config.outputs.bun-version }}-${{ hashFiles('frontend/bun.lock') }}
+          restore-keys: |
+            bun-packages-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cache-config.outputs.bun-version }}-
       - name: Install frontend dependencies and Chromium
         run: |
           mise run frontend:install

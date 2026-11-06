@@ -80,6 +80,25 @@ Job `infrastructure` запускается отдельно по своему �
 профиль agent в CI не используется. Повторная обычная Go-сборка перед portable
 Linux-сборкой удалена: CI компилирует release executable один раз.
 
+Job `checks` восстанавливает три кеша через закреплённый `actions/cache`:
+
+- Go modules (`go env GOMODCACHE`): ОС, архитектура, версия Go и хеш `go.mod`/`go.sum`.
+- Go compilation (`go env GOCACHE`): те же поля плюс хеш Go-файлов в `cmd/` и
+  `internal/`, чтобы изменения кода сохраняли новый build cache.
+- Bun packages (`bun pm --cwd frontend cache`): ОС, архитектура, версия Bun и
+  хеш `frontend/bun.lock`.
+
+Пути определяются внутри job container после установки locked toolchain;
+версии берутся у установленных mise инструментов. `restore-keys` позволяют
+использовать предыдущие загрузки при смене зависимостей; для Go build сначала
+ищется кеш с теми же зависимостями. Версии инструментов и ОС/архитектура при
+fallback сохраняются. Отсутствующий кеш не мешает обычной установке и проверкам.
+`bun install --frozen-lockfile` выполняется и при cache hit; `node_modules` и
+release artifacts в dependency cache не входят. Новые кеши сохраняются после
+успеха job; существующая запись с точным ключом не перезаписывается.
+Правила ключей и fallback — [GitHub dependency caching](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching),
+путь Bun — [Bun global cache](https://bun.sh/docs/pm/global-cache).
+
 Артефакты хранятся семь дней: `linux-amd64-<commit SHA>` содержит два Go executable
 и создаётся только при backend-сборке, `frontend-<commit SHA>` — `frontend/dist`
 при frontend-сборке. Render собирает frontend самостоятельно из Git.
