@@ -197,7 +197,7 @@ h3 {
 }
 .catalog-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 320px minmax(0, 1fr);
   gap: 32px;
   align-items: start;
 }
@@ -836,7 +836,7 @@ footer {
     padding-right: 32px;
   }
   .catalog-layout {
-    grid-template-columns: 180px minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
     gap: 24px;
   }
   .product-body {
@@ -877,7 +877,7 @@ footer {
     gap: 30px;
   }
   .catalog-layout {
-    grid-template-columns: 160px minmax(0, 1fr);
+    grid-template-columns: 280px minmax(0, 1fr);
     gap: 20px;
   }
   .products {
@@ -1570,4 +1570,69 @@ footer {
     width: 100%;
     margin-top: 8px;
   }
+}
+
+/* Search text fills the available area without its native input background. */
+.catalog-search-form {
+  width: 100%;
+  align-items: stretch;
+}
+.catalog-search-form .search {
+  flex: 1 1 0;
+  width: 0;
+  position: relative;
+  padding: 0;
+  border: 0;
+}
+:root[data-theme] .catalog-search-form .search input {
+  flex: 1 1 auto;
+  width: 100%;
+  margin: 0;
+  padding: 13px 14px 13px 44px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--theme-surface, white);
+  color: inherit;
+}
+.catalog-search-form .search > svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  :root[data-theme] .catalog-search-form .search input {
+    padding-left: 14px;
+  }
+}
+@media (min-width: 641px) and (max-width: 800px) {
+  .catalog-results .products {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.catalog-filter-panel .filter-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+.catalog-filter-panel .filter-fields > label {
+  min-width: 0;
+  margin: 0;
+}
+.catalog-filter-panel .filter-brand,
+.catalog-filter-panel .filter-model,
+.catalog-filter-panel .filter-price,
+.catalog-filter-panel .filter-stock,
+.catalog-filter-panel .filter-actions,
+.catalog-filter-panel .filter-checkbox {
+  grid-column: 1 / -1;
+}
+:root[data-theme] .catalog-filter-panel .filter-fields select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='m2 2 4 4 4-4' fill='none' stroke='%23858e9c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 8px;
 }

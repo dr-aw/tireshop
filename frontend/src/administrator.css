@@ -518,3 +518,28 @@
     grid-column: 1 / -1;
   }
 }
+
+.administrator .admin-filter-panel .filter-fields > label {
+  grid-column: span 2;
+}
+.administrator .admin-filter-panel .filter-fields > .filter-brand,
+.administrator .admin-filter-panel .filter-fields > .filter-model,
+.administrator
+  .admin-filter-panel
+  .filter-fields
+  > label:has(input[type="search"]) {
+  grid-column: span 3;
+}
+@media (max-width: 700px) {
+  .administrator .admin-filter-panel .filter-fields > label {
+    grid-column: span 1;
+  }
+  .administrator .admin-filter-panel .filter-fields > .filter-brand,
+  .administrator .admin-filter-panel .filter-fields > .filter-model,
+  .administrator
+    .admin-filter-panel
+    .filter-fields
+    > label:has(input[type="search"]) {
+    grid-column: 1 / -1;
+  }
+}

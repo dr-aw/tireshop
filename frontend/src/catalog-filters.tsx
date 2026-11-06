@@ -41,6 +41,25 @@ export const filterKeys = [
   "in_stock",
   "visibility",
 ];
+function categoryFields(kind: string) {
+  return kind === "tyre"
+    ? [...common.filter(([key]) => key !== "condition"), ...tyre]
+    : kind === "wheel"
+      ? wheel
+      : [];
+}
+export function cleanCategoryFilters(values: FilterValues): FilterValues {
+  const next = { ...values };
+  const allowed = new Set(
+    categoryFields(values.kind || "").map(([key]) => key),
+  );
+  for (const key of characteristicKeys) if (!allowed.has(key)) delete next[key];
+  if (values.kind !== "tyre") {
+    delete next.tread_min;
+    delete next.tread_max;
+  }
+  return next;
+}
 export function changeKind(values: FilterValues, kind: string): FilterValues {
   const next: FilterValues = { ...values, kind };
   for (const [key] of [...tyre, ...wheel]) delete next[key];
@@ -50,7 +69,7 @@ export function changeKind(values: FilterValues, kind: string): FilterValues {
   }
   delete next.tread_min;
   delete next.tread_max;
-  return next;
+  return cleanCategoryFilters(next);
 }
 
 export function CatalogFilters({
@@ -103,10 +122,7 @@ export function CatalogFilters({
       });
     return () => controller.abort();
   }, [admin, kind, revision]);
-  const fields = [
-    ...(kind ? common : []),
-    ...(kind === "tyre" ? tyre : kind === "wheel" ? wheel : []),
-  ];
+  const fields = categoryFields(kind);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
