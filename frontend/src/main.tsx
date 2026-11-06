@@ -6,6 +6,7 @@ import { ProductPage } from "./product-page";
 import { BasketPhoto } from "./basket-photo";
 import { ThemeToggle } from "./theme-toggle";
 import { ProductGrid } from "./product-grid";
+import { PhoneInput, phoneNumber, displayPhone } from "./phone";
 import { CatalogFilters, changeKind } from "./catalog-filters";
 import { useCatalogNavigation } from "./catalog-navigation";
 import { OrderSteps } from "./order-steps";
@@ -248,7 +249,9 @@ function App() {
     initial.saved && "receipt" in initial.saved ? initial.saved.receipt : "",
   );
   const [name, setName] = useState(attempt?.payload.customer_name || "");
-  const [phone, setPhone] = useState(attempt?.payload.phone || "");
+  const [phone, setPhone] = useState(
+    displayPhone(attempt?.payload.phone || ""),
+  );
   const [comment, setComment] = useState(attempt?.payload.comment || "");
   const [message, setMessage] = useState(
     initial.error ||
@@ -423,7 +426,7 @@ function App() {
     }
     const payload: Payload = {
       customer_name: name,
-      phone,
+      phone: phoneNumber(phone),
       comment,
       items: lines.map((l) => ({
         product_id: l.product_id,
@@ -1023,15 +1026,7 @@ function App() {
                   </label>
                   <label>
                     Телефон
-                    <input
-                      type="tel"
-                      autoComplete="tel"
-                      placeholder="+7 999 123-45-67"
-                      pattern="\+[0-9 \(\)\-]{8,30}"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
+                    <PhoneInput value={phone} onChange={setPhone} />
                   </label>
                   <label>
                     Комментарий <span className="muted">· необязательно</span>

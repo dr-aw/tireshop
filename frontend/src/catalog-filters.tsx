@@ -148,6 +148,12 @@ export function CatalogFilters({
             step={step}
             placeholder="От"
             defaultValue={values[`${key}_min`] || ""}
+            onInput={(e) => {
+              if (e.currentTarget.value)
+                e.currentTarget.value = String(
+                  Math.max(0, Math.min(max, e.currentTarget.valueAsNumber)),
+                );
+            }}
           />
           <span aria-hidden="true">—</span>
           <input
@@ -159,6 +165,12 @@ export function CatalogFilters({
             step={step}
             placeholder="До"
             defaultValue={values[`${key}_max`] || ""}
+            onInput={(e) => {
+              if (e.currentTarget.value)
+                e.currentTarget.value = String(
+                  Math.max(0, Math.min(max, e.currentTarget.valueAsNumber)),
+                );
+            }}
           />
         </div>
       </fieldset>

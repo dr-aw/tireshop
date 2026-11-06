@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import "./administrator.css";
 import { ThemeToggle } from "./theme-toggle";
+import { displayPhone, phoneNumber } from "./phone";
 import {
   CatalogFilters,
   changeKind,
@@ -491,7 +492,11 @@ export function Administrator() {
                           </td>
                           <td>
                             {r.customer_name}
-                            <small>{r.phone}</small>
+                            <small>
+                              <a href={`tel:${phoneNumber(r.phone)}`}>
+                                {displayPhone(r.phone)}
+                              </a>
+                            </small>
                           </td>
                           <td>
                             <span className={`admin-status ${r.status}`}>
@@ -649,7 +654,10 @@ export function Administrator() {
                         onChange={(e) =>
                           setProduct({
                             ...product,
-                            unit_price_rub: e.target.valueAsNumber,
+                            unit_price_rub: Math.max(
+                              0,
+                              e.target.valueAsNumber || 0,
+                            ),
                           })
                         }
                       />
@@ -754,7 +762,8 @@ function RequestEditor({
     <section className="admin-card admin-editor">
       <h2>Заявка № {r.id.slice(0, 8)}</h2>
       <p>
-        {r.customer_name} · <a href={`tel:${r.phone}`}>{r.phone}</a> ·{" "}
+        {r.customer_name} ·{" "}
+        <a href={`tel:${phoneNumber(r.phone)}`}>{displayPhone(r.phone)}</a> ·{" "}
         {date(r.created_at)}
       </p>
       <p className="admin-comment">
