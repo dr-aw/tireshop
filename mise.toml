@@ -24,6 +24,10 @@ description = "Run Go tests with the race detector"
 run = "go test -race ./..."
 
 [tasks.lint]
+description = "Check backend, frontend, scripts and migrations"
+depends = ["backend:lint", "frontend:lint", "scripts:lint", "db:lint"]
+
+[tasks."backend:lint"]
 description = "Check Go code with vet and gofmt"
 run = '''
 set -eu
@@ -34,18 +38,33 @@ if [ -n "$unformatted_go_files" ]; then
   printf 'Go files need formatting:\n%s\n' "$unformatted_go_files"
   exit 1
 fi
-for script in scripts/*.sh; do
-  bash -n "$script"
-done
+'''
+
+[tasks."scripts:lint"]
+description = "Check shell syntax, including CI and container setup"
+run = "for script in scripts/*.sh .github/scripts/*.sh .devcontainer/*.sh; do bash -n \"$script\" || exit; done"
+
+[tasks."db:lint"]
+description = "Validate both migration histories"
+run = '''
 goose -env none -dir migrations/catalog validate
 goose -env none -dir migrations/requests validate
+'''
+
+[tasks."frontend:lint"]
+description = "Typecheck and format-check the frontend"
+run = '''
 tsc -p frontend
 prettier --check frontend/src frontend/index.html frontend/tsconfig.json frontend/vite.config.js frontend/e2e
 '''
 
 [tasks.build]
 description = "Build independent Go APIs and static frontend"
-run = "mkdir -p build && go build -o build/catalog ./cmd/catalog && go build -o build/requests ./cmd/requests && vite build frontend"
+depends = ["backend:build", "frontend:build"]
+
+[tasks."backend:build"]
+description = "Build independent Go APIs"
+run = "mkdir -p build && go build -o build/catalog ./cmd/catalog && go build -o build/requests ./cmd/requests"
 
 [tasks."test:integration"]
 description = "Test PostgreSQL storage in a new temporary local database, then remove it"

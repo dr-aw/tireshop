@@ -13,6 +13,20 @@ fmt/validate и три mock plan tests прошли без credentials и apply.
 
 ## Актуальное уточнение: Render и ручные миграции
 
+CI 2026-11-06: проверки разделены по затронутым путям. Frontend не публикует
+Go-образы, Terraform проверяется отдельно, общие build/runtime настройки
+включают полный набор. Secret scan и shell/CI-filter checks выполняются всегда.
+База сравнения — последний успешный workflow в main; отменённые/упавшие pushes
+не теряются. При ошибке API/неизвестной базе и workflow_dispatch — полный набор.
+Сохраняются backend и frontend artifacts отдельно; повторная Go-сборка исключена.
+Локально прошли 29 сценариев классификации (включая удаления, rename, несколько
+commits, неизвестную базу и non-ancestor), shell/YAML/Markdown и 26 ссылок,
+test/race, lint/build, PostgreSQL/browser/bootstrap, Terraform validate и пять
+mock tests. Установка locked subsets проверена dry-run в имеющемся контейнере;
+чистая установка на Linux amd64 runner ещё не проверена.
+GitHub API, job conditions, artifact packaging и GHCR требуют удалённого
+подтверждения после push пользователя.
+
 Пользователь выбрал подготовку CI под Render + Aiven. Разделы Northflank ниже
 сохранены как предыдущий вариант и **не являются текущим порядком deployment**.
 Текущая инструкция — [CI и публикация на Render](../guides/deployment.md),
