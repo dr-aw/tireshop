@@ -1,13 +1,12 @@
-import { useRef } from "react";
-
 export function phoneNumber(value: string) {
   return "+" + value.replace(/\D/g, "");
 }
 export function formatPhone(value: string) {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
+  if (digits === "7" || digits === "8") return "+7";
   let national = digits;
-  if (value.startsWith("+") || digits.length > 10) {
+  if (value.startsWith("+") || digits.startsWith("8") || digits.length > 10) {
     if (!/^[78]/.test(digits)) return "+7";
     national = digits.slice(1);
   }
@@ -31,10 +30,8 @@ export function PhoneInput({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const ref = useRef<HTMLInputElement>(null);
   return (
     <input
-      ref={ref}
       type="tel"
       autoComplete="tel"
       inputMode="tel"
@@ -57,20 +54,33 @@ export function PhoneInput({
           before--;
         }
         const formatted = formatPhone(raw);
-        onChange(formatted);
-        requestAnimationFrame(() => {
-          if (!ref.current || document.activeElement !== ref.current) return;
-          let count = 0,
-            position = formatted.length;
-          for (let i = 0; i < formatted.length; i++) {
-            if (/\d/.test(formatted[i])) count++;
-            if (count === before) {
-              position = i + 1;
-              break;
-            }
+        // A national number adds a country-code digit before the typed digits.
+        if (
+          !raw.startsWith("+") &&
+          raw.replace(/\D/g, "").length <= 10 &&
+          !raw.replace(/\D/g, "").startsWith("8") &&
+          raw.replace(/\D/g, "") !== "7"
+        )
+          before++;
+        let count = 0,
+          position = formatted.length;
+        for (let i = 0; i < formatted.length; i++) {
+          if (/\d/.test(formatted[i])) count++;
+          if (count === before) {
+            position = i + 1;
+            while (
+              position < formatted.length &&
+              /\D/.test(formatted[position])
+            )
+              position++;
+            break;
           }
-          ref.current.setSelectionRange(position, position);
-        });
+        }
+        // Set selection synchronously: a queued animation frame can move the
+        // caret after the next keystroke when someone types quickly.
+        input.value = formatted;
+        input.setSelectionRange(position, position);
+        onChange(formatted);
       }}
     />
   );

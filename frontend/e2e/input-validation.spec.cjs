@@ -44,3 +44,32 @@ test("phone formatting and numeric limits in shop and administration", async ({
   await tread.fill("-1");
   await expect(tread).toHaveValue("0");
 });
+
+test("phone caret stays after typed digits with and without country code", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const phone = page.getByLabel("Телефон", { exact: true });
+  await phone.pressSequentially("7");
+  await expect(phone).toHaveValue("+7");
+  expect(await phone.evaluate((input) => input.selectionStart)).toBe(2);
+  await phone.pressSequentially("9876543210");
+  await expect(phone).toHaveValue("+7(987)654-32-10");
+  await phone.fill("");
+  await phone.pressSequentially("9");
+  await expect(phone).toHaveValue("+7(9");
+  expect(await phone.evaluate((input) => input.selectionStart)).toBe(4);
+  await phone.pressSequentially("876543210");
+  await expect(phone).toHaveValue("+7(987)654-32-10");
+  await phone.fill("");
+  await phone.pressSequentially("79876543210", { delay: 25 });
+  await expect(phone).toHaveValue("+7(987)654-32-10");
+  await phone.fill("");
+  await phone.pressSequentially("8");
+  await expect(phone).toHaveValue("+7");
+  expect(await phone.evaluate((input) => input.selectionStart)).toBe(2);
+  await phone.pressSequentially("9888888888");
+  await expect(phone).toHaveValue("+7(988)888-88-88");
+  await phone.fill("89876543210");
+  await expect(phone).toHaveValue("+7(987)654-32-10");
+});
