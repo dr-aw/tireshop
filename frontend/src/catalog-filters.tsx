@@ -41,12 +41,35 @@ export const filterKeys = [
   "in_stock",
   "visibility",
 ];
+function categoryFields(kind: string) {
+  return kind === "tyre"
+    ? [...common.filter(([key]) => key !== "condition"), ...tyre]
+    : kind === "wheel"
+      ? wheel
+      : [];
+}
+export function cleanCategoryFilters(values: FilterValues): FilterValues {
+  const next = { ...values };
+  const allowed = new Set(
+    categoryFields(values.kind || "").map(([key]) => key),
+  );
+  for (const key of characteristicKeys) if (!allowed.has(key)) delete next[key];
+  if (values.kind !== "tyre") {
+    delete next.tread_min;
+    delete next.tread_max;
+  }
+  return next;
+}
 export function changeKind(values: FilterValues, kind: string): FilterValues {
   const next: FilterValues = { ...values, kind };
   for (const [key] of [...tyre, ...wheel]) delete next[key];
+  if (!kind) {
+    for (const [key] of common) delete next[key];
+    delete next.q;
+  }
   delete next.tread_min;
   delete next.tread_max;
-  return next;
+  return cleanCategoryFilters(next);
 }
 
 export function CatalogFilters({
@@ -69,6 +92,12 @@ export function CatalogFilters({
   const [revision, setRevision] = useState(0);
   const kind = values.kind || "";
   useEffect(() => {
+    if (!kind) {
+      setOptions({});
+      setLoading(false);
+      setError("");
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setError("");
@@ -93,10 +122,7 @@ export function CatalogFilters({
       });
     return () => controller.abort();
   }, [admin, kind, revision]);
-  const fields = [
-    ...common,
-    ...(kind === "tyre" ? tyre : kind === "wheel" ? wheel : []),
-  ];
+  const fields = categoryFields(kind);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -122,6 +148,12 @@ export function CatalogFilters({
             step={step}
             placeholder="От"
             defaultValue={values[`${key}_min`] || ""}
+            onInput={(e) => {
+              if (e.currentTarget.value)
+                e.currentTarget.value = String(
+                  Math.max(0, Math.min(max, e.currentTarget.valueAsNumber)),
+                );
+            }}
           />
           <span aria-hidden="true">—</span>
           <input
@@ -133,6 +165,12 @@ export function CatalogFilters({
             step={step}
             placeholder="До"
             defaultValue={values[`${key}_max`] || ""}
+            onInput={(e) => {
+              if (e.currentTarget.value)
+                e.currentTarget.value = String(
+                  Math.max(0, Math.min(max, e.currentTarget.valueAsNumber)),
+                );
+            }}
           />
         </div>
       </fieldset>
@@ -161,7 +199,7 @@ export function CatalogFilters({
       {loading && <p role="status">Загружаем параметры…</p>}
       <form key={JSON.stringify(values)} onSubmit={submit}>
         <fieldset className="filter-fields" disabled={disabled}>
-          {admin && (
+          {admin && kind && (
             <label>
               Поиск
               <input

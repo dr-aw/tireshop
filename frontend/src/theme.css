@@ -1,0 +1,274 @@
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --theme-text: #e5e9f0;
+  --theme-surface: #161b23;
+  --theme-raised: #202733;
+  --theme-danger: #ff9399;
+  --theme-success: #87d6a0;
+  --theme-accent-text: #e9ca86;
+  --theme-warning-bg: #382d1c;
+  --theme-success-bg: #173025;
+  --theme-danger-bg: #351e27;
+  --muted: #acb5c3;
+  --line: #3a4555;
+  color: var(--theme-text);
+  background: #10151c;
+}
+.theme-toggle,
+.administrator .theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+.theme-toggle:hover,
+.administrator .theme-toggle:hover {
+  background: #80808020;
+}
+.header-inner > .theme-toggle {
+  margin-left: auto;
+}
+.header-inner > .cart-link {
+  margin-left: 0;
+}
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.admin-header-actions > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-username {
+  display: inline-block;
+  padding: 12px 18px;
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .topline,
+:root[data-theme="dark"] .category-link:hover,
+:root[data-theme="dark"] .category-link.selected,
+:root[data-theme="dark"] .selection-note,
+:root[data-theme="dark"] .product-image,
+:root[data-theme="dark"] .stepper button:hover:not(:disabled),
+:root[data-theme="dark"] .empty-results,
+:root[data-theme="dark"] .basket-image,
+:root[data-theme="dark"] .contact-form,
+:root[data-theme="dark"] input:disabled,
+:root[data-theme="dark"] textarea:disabled,
+:root[data-theme="dark"] .receipt,
+:root[data-theme="dark"] .secondary:hover,
+:root[data-theme="dark"] .order-step:hover .order-step-icon,
+:root[data-theme="dark"] footer,
+:root[data-theme="dark"] .administrator,
+:root[data-theme="dark"] .admin-categories [aria-pressed="true"],
+:root[data-theme="dark"] .admin-nav [aria-pressed="true"],
+:root[data-theme="dark"] .admin-status,
+:root[data-theme="dark"] .admin-status.delivered,
+:root[data-theme="dark"] .admin-status.cancelled,
+:root[data-theme="dark"] .admin-error,
+:root[data-theme="dark"] .admin-notice,
+:root[data-theme="dark"] .administrator tr.admin-zero-stock td,
+:root[data-theme="dark"] .admin-thumbnail,
+:root[data-theme="dark"] .admin-card-link:hover,
+:root[data-theme="dark"] .administrator tr.admin-hidden-product td {
+  background: var(--theme-raised);
+}
+
+:root[data-theme="dark"] .topline,
+:root[data-theme="dark"] .logo small,
+:root[data-theme="dark"] .breadcrumbs,
+:root[data-theme="dark"] .eyebrow,
+:root[data-theme="dark"] .category-link > span:last-child,
+:root[data-theme="dark"] .search,
+:root[data-theme="dark"] .sort,
+:root[data-theme="dark"] .results-heading,
+:root[data-theme="dark"] .product-type,
+:root[data-theme="dark"] .category,
+:root[data-theme="dark"] .price small,
+:root[data-theme="dark"] .checkout-heading > span,
+:root[data-theme="dark"] .remove,
+:root[data-theme="dark"] input:disabled,
+:root[data-theme="dark"] textarea:disabled,
+:root[data-theme="dark"] .muted,
+:root[data-theme="dark"] .empty-basket > span,
+:root[data-theme="dark"] .receipt p,
+:root[data-theme="dark"] .receipt small,
+:root[data-theme="dark"] .order-step-number,
+:root[data-theme="dark"] .footer-inner > span,
+:root[data-theme="dark"] .admin-heading p,
+:root[data-theme="dark"] .administrator th,
+:root[data-theme="dark"] .administrator small,
+:root[data-theme="dark"] .admin-empty,
+:root[data-theme="dark"] .admin-thumbnail,
+:root[data-theme="dark"] .administrator tr.admin-hidden-product td,
+:root[data-theme="dark"]
+  .administrator
+  tr.admin-hidden-product
+  .admin-product-link {
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .site-header,
+:root[data-theme="dark"] .sort select,
+:root[data-theme="dark"] .product,
+:root[data-theme="dark"] .stepper,
+:root[data-theme="dark"] .stepper input,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .secondary,
+:root[data-theme="dark"] .order-step-icon,
+:root[data-theme="dark"] .catalog-photo-controls,
+:root[data-theme="dark"] .catalog-photo-controls button,
+:root[data-theme="dark"] .product .catalog-photos,
+:root[data-theme="dark"] .product .catalog-photo-controls button,
+:root[data-theme="dark"] .product .catalog-photo-controls button:hover,
+:root[data-theme="dark"] .product .catalog-photo-controls button:focus-visible,
+:root[data-theme="dark"] .catalog-photo-controls > span,
+:root[data-theme="dark"] .product-page-gallery .catalog-photos,
+:root[data-theme="dark"] .filter-fields input,
+:root[data-theme="dark"] .filter-fields select,
+:root[data-theme="dark"] .administrator button,
+:root[data-theme="dark"] .admin-header,
+:root[data-theme="dark"] .admin-card,
+:root[data-theme="dark"] .administrator input,
+:root[data-theme="dark"] .administrator select,
+:root[data-theme="dark"] .administrator textarea,
+:root[data-theme="dark"] .administrator th,
+:root[data-theme="dark"] .admin-filter-panel {
+  background: var(--theme-surface);
+}
+
+:root[data-theme="dark"] .breadcrumbs a,
+:root[data-theme="dark"] .category-link,
+:root[data-theme="dark"] .sort select,
+:root[data-theme="dark"] .results-heading b,
+:root[data-theme="dark"] .stepper button,
+:root[data-theme="dark"] .buy-now,
+:root[data-theme="dark"] .secondary,
+:root[data-theme="dark"] .catalog-photo-controls button,
+:root[data-theme="dark"] .product .catalog-photo-controls button,
+:root[data-theme="dark"] .filter-fields > label,
+:root[data-theme="dark"] .filter-fields input,
+:root[data-theme="dark"] .filter-fields select,
+:root[data-theme="dark"] .filter-range legend,
+:root[data-theme="dark"] .administrator,
+:root[data-theme="dark"] .administrator button,
+:root[data-theme="dark"] .admin-header > a,
+:root[data-theme="dark"] .administrator input,
+:root[data-theme="dark"] .administrator select,
+:root[data-theme="dark"] .administrator textarea,
+:root[data-theme="dark"] .admin-notice,
+:root[data-theme="dark"] .admin-card-link {
+  color: var(--theme-text);
+}
+
+:root[data-theme="dark"] .search,
+:root[data-theme="dark"] .stepper,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .receipt,
+:root[data-theme="dark"] .secondary,
+:root[data-theme="dark"] .catalog-photo-controls button,
+:root[data-theme="dark"] .product-page-gallery .catalog-photos,
+:root[data-theme="dark"] .product-page-info input,
+:root[data-theme="dark"] .filter-fields input,
+:root[data-theme="dark"] .filter-fields select,
+:root[data-theme="dark"] .administrator button,
+:root[data-theme="dark"] .admin-card,
+:root[data-theme="dark"] .administrator input,
+:root[data-theme="dark"] .administrator select,
+:root[data-theme="dark"] .administrator textarea,
+:root[data-theme="dark"] .admin-error,
+:root[data-theme="dark"] .admin-notice,
+:root[data-theme="dark"] .admin-card-link {
+  border: 1px solid var(--line);
+}
+
+:root[data-theme="dark"] .product:hover,
+:root[data-theme="dark"] input:focus,
+:root[data-theme="dark"] textarea:focus,
+:root[data-theme="dark"] .order-step:hover,
+:root[data-theme="dark"] .order-step:hover .order-step-icon,
+:root[data-theme="dark"] .category-link.selected,
+:root[data-theme="dark"] .administrator .admin-primary,
+:root[data-theme="dark"] .admin-categories [aria-pressed="true"],
+:root[data-theme="dark"] .admin-nav [aria-pressed="true"],
+:root[data-theme="dark"] .admin-notice {
+  border-color: var(--line);
+}
+
+:root[data-theme="dark"] .notice,
+:root[data-theme="dark"] .quote,
+:root[data-theme="dark"] .admin-status.delivery {
+  background: var(--theme-warning-bg);
+}
+
+:root[data-theme="dark"] .empty-basket {
+  border: 1px dashed var(--line);
+}
+
+:root[data-theme="dark"] .check,
+:root[data-theme="dark"] .admin-status.delivered {
+  color: var(--theme-success);
+}
+
+:root[data-theme="dark"] .order-step {
+  background: linear-gradient(
+    145deg,
+    var(--theme-surface),
+    var(--theme-raised)
+  );
+}
+
+:root[data-theme="dark"] .catalog-specs summary,
+:root[data-theme="dark"] .admin-header > a span,
+:root[data-theme="dark"] .admin-categories [aria-pressed="true"],
+:root[data-theme="dark"] .admin-nav [aria-pressed="true"],
+:root[data-theme="dark"] .admin-status.delivery,
+:root[data-theme="dark"] .admin-status.cancelled,
+:root[data-theme="dark"] .admin-error,
+:root[data-theme="dark"] .admin-notice,
+:root[data-theme="dark"] .admin-product-link:hover,
+:root[data-theme="dark"] .administrator .admin-stock-shortage {
+  color: var(--theme-danger);
+}
+
+:root[data-theme="dark"] .catalog-specs dl > div,
+:root[data-theme="dark"] .admin-header,
+:root[data-theme="dark"] .administrator td,
+:root[data-theme="dark"] .administrator th,
+:root[data-theme="dark"] .admin-line {
+  border-bottom: 1px solid var(--line);
+}
+
+:root[data-theme="dark"] .product h3 a:hover {
+  color: var(--red, var(--theme-danger));
+}
+
+:root[data-theme="dark"] .administrator details {
+  border-top: 1px solid var(--line);
+}
+
+:root[data-theme="dark"] .administrator .admin-primary {
+  background: #c92332;
+  border-color: #c92332;
+  color: white;
+}
+:root[data-theme="dark"] .administrator .admin-primary:hover {
+  background: #b51f2c;
+}

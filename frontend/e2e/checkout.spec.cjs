@@ -25,6 +25,9 @@ test("lost committed response survives reload and retries the exact attempt", as
 
   await page.getByLabel("Имя", { exact: true }).fill("Browser Buyer");
   await page.getByLabel("Телефон", { exact: true }).fill("+79000000000");
+  await expect(page.getByLabel("Телефон", { exact: true })).toHaveValue(
+    "+7(900)000-00-00",
+  );
   let original, requestID;
   await page.route("**/api/requests", async (route) => {
     original = {

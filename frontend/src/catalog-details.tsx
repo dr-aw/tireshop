@@ -321,6 +321,8 @@ export function DetailsEditor({
               {label}
               <input
                 type={numeric ? "number" : "text"}
+                min={key === "tread_percent" ? 0 : undefined}
+                max={key === "tread_percent" ? 100 : undefined}
                 step="any"
                 value={value[key] ?? ""}
                 onChange={(e) =>
@@ -329,7 +331,9 @@ export function DetailsEditor({
                     [key]: numeric
                       ? e.target.value === ""
                         ? null
-                        : e.target.valueAsNumber
+                        : key === "tread_percent"
+                          ? Math.max(0, Math.min(100, e.target.valueAsNumber))
+                          : e.target.valueAsNumber
                       : e.target.value,
                   })
                 }

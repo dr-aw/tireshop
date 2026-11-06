@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   characteristicKeys,
+  cleanCategoryFilters,
   filterKeys,
   type FilterValues,
 } from "./catalog-filters";
@@ -14,11 +15,12 @@ const keys = new Set([
   "page",
 ]);
 function read(): FilterValues {
-  return Object.fromEntries(
+  const values = Object.fromEntries(
     [...new URLSearchParams(location.search)].filter(
       ([key, value]) => keys.has(key) && value !== "",
     ),
   );
+  return cleanCategoryFilters(values);
 }
 export function useCatalogNavigation() {
   const [values, setValues] = useState(read);
@@ -29,7 +31,7 @@ export function useCatalogNavigation() {
   }, []);
   function navigate(next: FilterValues, page = 1) {
     const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(next))
+    for (const [key, value] of Object.entries(cleanCategoryFilters(next)))
       if (key !== "page" && value) params.set(key, value);
     if (page > 1) params.set("page", String(page));
     const query = params.toString();

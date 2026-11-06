@@ -3,11 +3,23 @@ const { test, expect } = require(process.env.PLAYWRIGHT_TEST_MODULE);
 test("catalog filters paginate on the server, restore URL history and keep the cart", async ({
   page,
 }) => {
+  await page.goto("/");
+  const allFilters = page.locator(".catalog-filter-panel");
+  await expect(allFilters.getByRole("combobox")).toHaveCount(0);
+  await expect(
+    allFilters.getByLabel("Цена, ₽: от", { exact: true }),
+  ).toBeVisible();
+  await expect(allFilters.getByLabel("Только в наличии")).toBeVisible();
   await page.goto(
-    "/?kind=tyre&brand=Browser+Filter+Brand&sort=unit_price_rub#catalog",
+    "/?kind=tyre&brand=Browser+Filter+Brand&condition=obsolete&sort=unit_price_rub#catalog",
   );
   await expect(page.locator(".product")).toHaveCount(24);
   await expect(page.locator(".results-heading")).toContainText("30");
+  await expect(
+    page
+      .locator(".catalog-filter-panel")
+      .getByLabel("Состояние", { exact: true }),
+  ).toHaveCount(0);
   await page
     .locator(".product")
     .first()
@@ -68,6 +80,8 @@ test("catalog filters paginate on the server, restore URL history and keep the c
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Грузовые диски" }).click();
   await expect(page).toHaveURL(/kind=wheel/);
+  for (const label of ["Производитель", "Модель", "Состояние", "Год выпуска"])
+    await expect(filters.getByLabel(label, { exact: true })).toHaveCount(0);
   await expect(
     filters.getByLabel("Вылет ET, мм", { exact: true }),
   ).toBeVisible();
@@ -82,6 +96,30 @@ test("catalog filters paginate on the server, restore URL history and keep the c
   await expect(
     filters.getByRole("button", { name: "Применить", exact: true }),
   ).toBeVisible();
+  const diameterBox = await filters
+    .getByLabel("Диаметр диска, дюймы", { exact: true })
+    .boundingBox();
+  const widthBox = await filters
+    .getByLabel("Ширина диска, дюймы", { exact: true })
+    .boundingBox();
+  expect(Math.abs(diameterBox.y - widthBox.y)).toBeLessThan(2);
+  expect(diameterBox.x + diameterBox.width).toBeLessThan(widthBox.x);
+  await expect(
+    filters.getByLabel("Диаметр диска, дюймы", { exact: true }),
+  ).toHaveCSS("padding-right", "32px");
+  const searchFits = await page
+    .locator(".catalog-search-form")
+    .evaluate((form) => {
+      const input = form.querySelector("input").getBoundingClientRect();
+      const label = form.querySelector("label").getBoundingClientRect();
+      const button = form.querySelector("button").getBoundingClientRect();
+      return (
+        input.right <= label.right &&
+        label.right <= button.left &&
+        input.width > label.width - 35
+      );
+    });
+  expect(searchFits).toBe(true);
   await page.screenshot({ path: ".tmp/catalog-filters-mobile.png" });
   expect(
     await page.evaluate(
@@ -102,7 +140,9 @@ test("administrator filters the same catalog through the protected endpoint", as
   await page
     .getByRole("button", { name: "Каталог и остатки", exact: true })
     .click();
+  await page.getByRole("button", { name: "Шины", exact: true }).click();
   const filters = page.locator(".admin-filter-panel");
+  await expect(filters.getByLabel("Состояние", { exact: true })).toHaveCount(0);
   await filters
     .getByLabel("Производитель", { exact: true })
     .selectOption("Browser Filter Brand");
@@ -117,6 +157,8 @@ test("administrator filters the same catalog through the protected endpoint", as
     "Найдено: 3",
   );
   await page.getByRole("button", { name: "Диски", exact: true }).click();
+  for (const label of ["Производитель", "Модель", "Состояние", "Год выпуска"])
+    await expect(filters.getByLabel(label, { exact: true })).toHaveCount(0);
   await expect(
     filters.getByLabel("Сверловка PCD", { exact: true }),
   ).toBeVisible();
@@ -138,6 +180,7 @@ test("typed editor derives tyre dimensions and clears them when changing kind", 
   await page
     .getByRole("button", { name: "Каталог и остатки", exact: true })
     .click();
+  await page.getByRole("button", { name: "Шины", exact: true }).click();
   const filters = page.locator(".admin-filter-panel");
   await filters
     .getByLabel("Поиск", { exact: true })
@@ -179,4 +222,36 @@ test("typed editor derives tyre dimensions and clears them when changing kind", 
     wheel_offset: -118.5,
     size: "",
   });
+});
+
+test("search fills its wrapper and tablet/desktop filters have enough width", async ({
+  page,
+}) => {
+  for (const width of [390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/?kind=wheel");
+    const geometry = await page
+      .locator(".catalog-search-form")
+      .evaluate((form) => {
+        const input = form.querySelector("input").getBoundingClientRect();
+        const label = form.querySelector("label").getBoundingClientRect();
+        const aside = document
+          .querySelector("aside.filters")
+          .getBoundingClientRect();
+        return {
+          difference: Math.abs(input.width - label.width),
+          left: Math.abs(input.left - label.left),
+          aside: aside.width,
+          overflow: document.documentElement.scrollWidth > innerWidth,
+        };
+      });
+    expect(geometry.difference).toBeLessThan(1);
+    expect(geometry.left).toBeLessThan(1);
+    expect(geometry.overflow).toBe(false);
+    if (width > 640) expect(geometry.aside).toBeGreaterThanOrEqual(280);
+    await page.screenshot({
+      path: `.tmp/catalog-width-${width}.png`,
+      fullPage: false,
+    });
+  }
 });
