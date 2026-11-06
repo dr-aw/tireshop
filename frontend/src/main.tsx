@@ -4,6 +4,7 @@ import "./style.css";
 import { Administrator } from "./administrator";
 import { ProductPage } from "./product-page";
 import { BasketPhoto } from "./basket-photo";
+import { ThemeToggle } from "./theme-toggle";
 import { CatalogFilters, changeKind } from "./catalog-filters";
 import { useCatalogNavigation } from "./catalog-navigation";
 import { OrderSteps } from "./order-steps";
@@ -531,6 +532,7 @@ function App() {
             </a>
             <a href="#how-to-order">Как заказать</a>
           </nav>
+          <ThemeToggle />
           <a className="cart-link" href="#checkout">
             <svg
               width="20"

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import "./administrator.css";
+import { ThemeToggle } from "./theme-toggle";
 import {
   CatalogFilters,
   changeKind,
@@ -251,27 +252,30 @@ export function Administrator() {
           tire<span>shop</span>
         </a>
         <strong>Администратор</strong>
-        {user && (
-          <div>
-            {user}{" "}
-            <button
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  await api("logout", "POST", {});
-                  setUser(null);
-                  setDetail(null);
-                  setProduct(null);
-                  setRequests([]);
-                  setProducts([]);
-                  setChoices([]);
-                })
-              }
-            >
-              Выйти
-            </button>
-          </div>
-        )}
+        <div className="admin-header-actions">
+          <ThemeToggle />
+          {user && (
+            <div>
+              <span className="admin-username">{user}</span>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    await api("logout", "POST", {});
+                    setUser(null);
+                    setDetail(null);
+                    setProduct(null);
+                    setRequests([]);
+                    setProducts([]);
+                    setChoices([]);
+                  })
+                }
+              >
+                Выйти
+              </button>
+            </div>
+          )}
+        </div>
       </header>
       <main className="admin-main">
         {error && (
