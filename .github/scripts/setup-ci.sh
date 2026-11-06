@@ -10,10 +10,15 @@ ci_mise_version=$(sed -n 's/^ARG MISE_VERSION=//p' .devcontainer/Dockerfile)
 curl -fsSL https://mise.run -o "$RUNNER_TEMP/install-mise.sh"
 MISE_VERSION="$ci_mise_version" MISE_INSTALL_PATH=/usr/local/bin/mise sh "$RUNNER_TEMP/install-mise.sh"
 mise trust "$PWD/mise.toml"
-mise install --locked
+# With no arguments install the full common profile; small jobs install only
+# their locked tools. Never enable the agent profile in CI.
+export MISE_ENV=
+mise install --locked "$@"
 printf '%s\n' "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
 mise reshim
-umask 077
-ci_password_file="$RUNNER_TEMP/ci-postgres-password"
-od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > "$ci_password_file"
-printf 'PGPASSWORD_FILE=%s\n' "$ci_password_file" >> "$GITHUB_ENV"
+if [[ "${CI_DATABASE:-false}" == true ]]; then
+  umask 077
+  ci_password_file="$RUNNER_TEMP/ci-postgres-password"
+  od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > "$ci_password_file"
+  printf 'PGPASSWORD_FILE=%s\n' "$ci_password_file" >> "$GITHUB_ENV"
+fi

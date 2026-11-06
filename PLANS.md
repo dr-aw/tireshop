@@ -6,6 +6,22 @@
 
 ## Где мы сейчас
 
+CI 2026-11-06: запускать проверки по затронутым файлам, без публикации Go-образов
+при изменении только frontend. Результат: отдельные проверки репозитория,
+приложения и Terraform; Dockerfile, Compose, общий toolchain и CI включают
+пересборку API. Шаги: выделить задачи lint/build, классифицировать весь push,
+добавить условия jobs/steps, обновить инструкции. Проверка: сценарии фильтра
+(включая удаления, rename, несколько commits и неизвестную базу), YAML/shell,
+lint/build и локальные integration/browser. Удалённый Actions/GHCR — после push
+пользователя; инфраструктура из agent не запускается.
+Реализовано: отдельные repository/checks/infrastructure/images, locked subsets
+инструментов, фильтр от последнего успешного CI и полный ручной запуск;
+повторная Go-сборка удалена, artifacts разделены. Локально прошли 29 сценариев
+фильтра, shell/YAML/Markdown и 26 ссылок, test/race, lint/build, PostgreSQL
+integration/browser/bootstrap, Terraform validate и пять mock tests.
+GitHub API, skipped-job conditions, artifact packaging и GHCR ещё не проверены
+на runner; push не выполнялся.
+
 Исправление телефона: одиночная первая 7 должна давать +7, при вводе
 национального номера учитывать добавленную цифру кода в позиции каретки.
 Убрать отложенное перемещение каретки (гонка со следующим нажатием).

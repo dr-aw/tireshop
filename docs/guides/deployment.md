@@ -49,21 +49,50 @@ credential; удаление строки из Git или log не заменя�
 
 ### Что делает workflow
 
-Файл `.github/workflows/ci.yml` запускается **только на push в main**, включая
-merge в main. Push в dev и PR сами по себе его не запускают: это выбранный
-первоначальный режим, CI на PR можно включить позже.
+Файл `.github/workflows/ci.yml` запускается на **push в main**, включая merge,
+и вручную через Actions → CI → Run workflow. Push в dev и PR сами по себе
+его не запускают. Публикация образов разрешена только из main.
 
-1. В Linux container устанавливает toolchain через `mise install --locked`,
-   зависимости frontend по Bun lockfile и Chromium.
-2. Проверяет историю Git через gitleaks с redaction, затем test/race, lint,
-   Markdown, build, PostgreSQL integration и браузерные сценарии. Миграции
-   применяются только к новой временной тестовой БД и проверяются повторно.
-3. Сохраняет `linux-amd64-<commit SHA>` на семь дней: два Go executable и
-   `frontend/dist`. Это диагностический артефакт; Render сам его не скачивает.
-4. Только после успеха упаковывает проверенные executable в минимальные non-root
-   images и публикует `ghcr.io/<owner>/<repo>/catalog:<SHA>` и
-   `ghcr.io/<owner>/<repo>/requests:<SHA>`. Digest каждого — в job summary.
-   Образы не содержат исходников, toolchain, `.local` или секретов.
+Job `repository` сравнивает checkout с последним успешным запуском этого workflow
+в main через GitHub API (`actions:read`). Поэтому изменения из отменённого или
+упавшего push также попадут в проверки. При отсутствии успешной базы, ошибке API,
+переписанной истории и ручном запуске выполняется полный набор. Фильтр учитывает
+все commits, удаления и оба пути rename; неизвестные файлы включают полный набор.
+Набор выбранных проверок виден в summary job `repository`.
+
+| Изменения | Проверки и сборки |
+| --- | --- |
+| Любой push | История Git через gitleaks с redaction, shell syntax, тесты CI-фильтра |
+| Markdown, `.rumdl.toml` | Markdown lint |
+| `frontend/`, скрипты сборки Render и обработки media | Frontend lint/typecheck/build, PostgreSQL integration и browser; без Go-образов |
+| `cmd/`, `internal/`, Go dependencies, миграции, bootstrap Aiven, прочие `scripts/` | Go test/race/lint, миграции и bootstrap; frontend lint/build, integration/browser; оба Go-образа |
+| `deploy/terraform/` | Только Terraform fmt/init/validate и mock plans, без cloud credentials |
+| Dockerfile, Compose, `.devcontainer/`, `.dockerignore`, mise config/lock, `.github/`, `.env.example`, `.gitignore` | Полный набор и оба Go-образа |
+| `docs/contracts/` | Проверки обоих компонентов, Markdown и оба образа |
+| Неизвестные пути | Полный набор и оба Go-образа |
+
+Job `checks` с PostgreSQL запускается только для изменений приложения.
+Браузерные тесты frontend используют настоящие Go API и временную синтетическую
+БД: Go в этих тестах нужен, даже когда production-образы не собираются.
+Миграции применяются только к новой тестовой БД и проверяются повторно.
+Job `infrastructure` запускается отдельно по своему фильтру.
+Каждый job устанавливает нужный набор locked tools из общего профиля mise;
+профиль agent в CI не используется. Повторная обычная Go-сборка перед portable
+Linux-сборкой удалена: CI компилирует release executable один раз.
+
+Артефакты хранятся семь дней: `linux-amd64-<commit SHA>` содержит два Go executable
+и создаётся только при backend-сборке, `frontend-<commit SHA>` — `frontend/dist`
+при frontend-сборке. Render собирает frontend самостоятельно из Git.
+Только после успеха необходимых проверок job `images` упаковывает executable
+в минимальные non-root images и публикует `ghcr.io/<owner>/<repo>/catalog:<SHA>`
+и `ghcr.io/<owner>/<repo>/requests:<SHA>`. Digest каждого — в job summary.
+Образы не содержат исходников, toolchain, `.local` или секретов.
+
+После frontend-only изменения новых API images с SHA этого commit не будет:
+сохраняются предыдущие проверенные API digest, обновляется только frontend.
+Аналогично Terraform-only правка не требует новых образов. Для принудительной
+пересборки (например, при обновлении runtime base tag) выбрать Run workflow
+в main: он выполняет полный набор и публикует оба образа.
 
 Нет `latest`, вызовов deploy hooks, доступа к Aiven или production migrations.
 SHA GitHub Actions закреплены в workflow. Runtime base image обновляется
@@ -77,7 +106,9 @@ SHA GitHub Actions закреплены в workflow. Runtime base image обно
    пользователь. После merge в `main` открыть Actions → CI. Если публикация
    запрещена политиками аккаунта/организации, разрешить packages для workflow,
    не заменять `GITHUB_TOKEN` широким персональным токеном.
-2. Проверить jobs `checks` и `images`, наличие обоих packages и digest в summary.
+2. Проверить выбранные jobs `repository`, `checks`, `infrastructure` и `images`.
+   Пропущенные по фильтру jobs ожидаемы; при backend-сборке проверить наличие
+   обоих packages и digest в summary.
    До правки production runtime образы являются проверенными сборками, но ещё
    не готовыми к подключению Aiven.
 3. В Render создать два **Web Service → Existing Image**, архитектура

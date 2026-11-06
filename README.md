@@ -68,8 +68,11 @@ mise run test:browser
 
 ## CI и деплой
 
-1. Push/merge в `main` запускает CI: тесты, lint, сборку и публикацию двух образов
-   в GHCR с тегом SHA и digest. В `dev` Actions пока не запускается.
+1. Push/merge в `main` запускает CI по затронутым файлам: frontend не пересобирает
+   Go-образы; backend, Dockerfile, Compose и общие настройки пересобирают оба API
+   в GHCR с тегом SHA и digest. Terraform проверяется отдельно. Проверка секретов
+   выполняется всегда. Ручной Run workflow запускает полный набор проверок;
+   публикация образов разрешена только из `main`. Push в `dev` не запускает CI.
 2. Миграции Aiven выполняются вручную через goose: сначала каталог, затем заявки.
    После успешных миграций обновляются API и frontend выбранного commit.
 3. API: два Cloud Run service через Terraform. Frontend: Render Static Site из `main`,

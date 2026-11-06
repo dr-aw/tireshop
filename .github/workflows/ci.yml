@@ -3,16 +3,85 @@ name: CI
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  MISE_ENV: ""
+  # Each job explicitly installs its locked subset; do not auto-install the
+  # entire project toolchain when running a small repository/infra task.
+  MISE_TASK_RUN_AUTO_INSTALL: "false"
+  MISE_EXEC_AUTO_INSTALL: "false"
 
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  repository:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: ubuntu:24.04
+    permissions:
+      contents: read
+      actions: read
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      backend: ${{ steps.changes.outputs.backend }}
+      frontend: ${{ steps.changes.outputs.frontend }}
+      infra: ${{ steps.changes.outputs.infra }}
+    steps:
+      - name: Install container prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git jq unzip xz-utils
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Configure Git access in the build container
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" status --porcelain >/dev/null
+      - name: Select checks since the last successful CI
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          base=''
+          if [[ "$EVENT_NAME" == push ]]; then
+            # Missing history/API failure means full checks. Include cancelled or
+            # failed pushes by comparing to the last SUCCESS, not event.before.
+            base=$(curl --fail --silent --show-error --retry 3 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=1" \
+              | jq -er '.workflow_runs[0].head_sha // empty') || base=''
+          fi
+          bash .github/scripts/changes.sh "$base" "$GITHUB_SHA" > "$RUNNER_TEMP/changes"
+          cat "$RUNNER_TEMP/changes" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/changes" >> "$GITHUB_STEP_SUMMARY"
+      - name: Prepare locked repository tools
+        run: bash .github/scripts/setup-ci.sh gitleaks rumdl
+      - name: Scan repository history for secrets
+        run: mise exec -- gitleaks git --redact --no-banner
+      - name: Check Markdown
+        if: steps.changes.outputs.markdown == 'true'
+        run: mise exec -- rumdl check .
+      - name: Check shell syntax and CI change detection
+        run: |
+          mise run scripts:lint
+          bash .github/scripts/test-changes.sh
+
   checks:
+    needs: repository
+    if: needs.repository.outputs.backend == 'true' || needs.repository.outputs.frontend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     container: ubuntu:24.04
@@ -38,49 +107,87 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
-          fetch-depth: 0
       - name: Configure Git access in the build container
         run: |
-          # Checkout's JS action and shell steps can use different global configs.
-          # Trust only this checkout, preserving Go's VCS revision metadata.
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git -C "$GITHUB_WORKSPACE" status --porcelain >/dev/null
       - name: Prepare locked toolchain and disposable DB credentials
-        run: bash .github/scripts/setup-ci.sh
+        env:
+          CI_DATABASE: "true"
+        run: bash .github/scripts/setup-ci.sh go bun node aqua:pressly/goose npm:vite npm:typescript npm:@playwright/test npm:prettier
       - name: Install frontend dependencies and Chromium
         run: |
           mise run frontend:install
           mise exec -- playwright install --with-deps chromium
-      - name: Scan repository history for secrets
-        run: mise exec -- gitleaks git --redact --no-banner
-      - name: Test, lint and build
+      - name: Test and lint backend and migrations
+        if: needs.repository.outputs.backend == 'true'
         run: |
           mise run test
-          mise run lint
-          mise exec -- rumdl check .
-          mise run build
+          mise run backend:lint
+          mise run db:lint
+      - name: Lint and build frontend
+        if: needs.repository.outputs.frontend == 'true'
+        run: |
+          mise run frontend:lint
+          mise run frontend:build
+      - name: Check production DB bootstrap
+        if: needs.repository.outputs.backend == 'true'
+        run: mise run test:bootstrap
       - name: PostgreSQL migrations, integration and browser tests
-        run: |
-          mise run test:bootstrap
-          mise run test:browser
-      - name: Validate infrastructure without cloud credentials
-        run: mise run infra:check
+        run: mise run test:browser
       - name: Build portable Linux executables
+        if: needs.repository.outputs.backend == 'true'
         run: |
+          mkdir -p build
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 mise exec -- go build -trimpath -o build/catalog ./cmd/catalog
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 mise exec -- go build -trimpath -o build/requests ./cmd/requests
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: needs.repository.outputs.backend == 'true'
         with:
           name: linux-amd64-${{ github.sha }}
           path: |
             build/catalog
             build/requests
-            frontend/dist
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: needs.repository.outputs.frontend == 'true'
+        with:
+          name: frontend-${{ github.sha }}
+          path: frontend/dist
           if-no-files-found: error
           retention-days: 7
 
+  infrastructure:
+    needs: repository
+    if: needs.repository.outputs.infra == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container: ubuntu:24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install container prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git unzip xz-utils
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Prepare locked Terraform
+        run: bash .github/scripts/setup-ci.sh terraform
+      - name: Validate infrastructure without cloud credentials
+        run: mise run infra:check
+
   images:
-    needs: checks
+    needs: [repository, checks, infrastructure]
+    # A skipped Terraform job is expected for application-only changes. Failures
+    # in any required check still block publication; cancellation blocks it too.
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.repository.result == 'success' &&
+          needs.repository.outputs.backend == 'true' && needs.checks.result == 'success' &&
+          (needs.infrastructure.result == 'success' || needs.infrastructure.result == 'skipped') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -93,7 +200,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: linux-amd64-${{ github.sha }}
-          path: release
+          path: release/build
       - name: Package verified binaries and publish images
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
