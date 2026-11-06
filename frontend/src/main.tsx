@@ -5,6 +5,7 @@ import { Administrator } from "./administrator";
 import { ProductPage } from "./product-page";
 import { BasketPhoto } from "./basket-photo";
 import { ThemeToggle } from "./theme-toggle";
+import { ProductGrid } from "./product-grid";
 import { CatalogFilters, changeKind } from "./catalog-filters";
 import { useCatalogNavigation } from "./catalog-navigation";
 import { OrderSteps } from "./order-steps";
@@ -748,7 +749,7 @@ function App() {
                     </button>
                   </div>
                 )}
-                <div className="products">
+                <ProductGrid key={catalogQuery}>
                   {visible.map((p) => (
                     <article
                       className="product"
@@ -835,7 +836,7 @@ function App() {
                       </div>
                     </article>
                   ))}
-                </div>
+                </ProductGrid>
                 {!catalogLoading && !catalogError && catalogTotal > 24 && (
                   <nav
                     className="catalog-pagination"
