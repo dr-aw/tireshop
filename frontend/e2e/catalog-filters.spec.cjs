@@ -3,6 +3,13 @@ const { test, expect } = require(process.env.PLAYWRIGHT_TEST_MODULE);
 test("catalog filters paginate on the server, restore URL history and keep the cart", async ({
   page,
 }) => {
+  await page.goto("/");
+  const allFilters = page.locator(".catalog-filter-panel");
+  await expect(allFilters.getByRole("combobox")).toHaveCount(0);
+  await expect(
+    allFilters.getByLabel("Цена, ₽: от", { exact: true }),
+  ).toBeVisible();
+  await expect(allFilters.getByLabel("Только в наличии")).toBeVisible();
   await page.goto(
     "/?kind=tyre&brand=Browser+Filter+Brand&sort=unit_price_rub#catalog",
   );
@@ -102,6 +109,7 @@ test("administrator filters the same catalog through the protected endpoint", as
   await page
     .getByRole("button", { name: "Каталог и остатки", exact: true })
     .click();
+  await page.getByRole("button", { name: "Шины", exact: true }).click();
   const filters = page.locator(".admin-filter-panel");
   await filters
     .getByLabel("Производитель", { exact: true })
@@ -138,6 +146,7 @@ test("typed editor derives tyre dimensions and clears them when changing kind", 
   await page
     .getByRole("button", { name: "Каталог и остатки", exact: true })
     .click();
+  await page.getByRole("button", { name: "Шины", exact: true }).click();
   const filters = page.locator(".admin-filter-panel");
   await filters
     .getByLabel("Поиск", { exact: true })

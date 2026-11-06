@@ -151,6 +151,7 @@ test("administrator edits stock and request, dispatches once and retains history
   await page.getByLabel("Цена за штуку, ₽").fill("2500");
   await page.getByLabel("Текущий остаток, шт.").fill("4");
   await page.getByRole("button", { name: "Сохранить товар" }).click();
+  await page.getByRole("button", { name: "Шины", exact: true }).click();
   await page
     .locator(".admin-filter-panel")
     .getByLabel("Поиск", { exact: true })
@@ -184,6 +185,7 @@ test("administrator edits stock and request, dispatches once and retains history
     .locator(".admin-filter-panel")
     .getByRole("button", { name: "Сбросить фильтры", exact: true })
     .click();
+  await page.getByRole("button", { name: "Все товары", exact: true }).click();
   await page.locator(".admin-column-picker summary").click();
   await page.getByRole("checkbox", { name: "Бренд", exact: true }).check();
   await page

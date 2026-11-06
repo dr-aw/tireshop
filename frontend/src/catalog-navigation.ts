@@ -14,11 +14,16 @@ const keys = new Set([
   "page",
 ]);
 function read(): FilterValues {
-  return Object.fromEntries(
+  const values = Object.fromEntries(
     [...new URLSearchParams(location.search)].filter(
       ([key, value]) => keys.has(key) && value !== "",
     ),
   );
+  if (!values.kind) {
+    for (const key of [...characteristicKeys, "tread_min", "tread_max"])
+      delete values[key];
+  }
+  return values;
 }
 export function useCatalogNavigation() {
   const [values, setValues] = useState(read);

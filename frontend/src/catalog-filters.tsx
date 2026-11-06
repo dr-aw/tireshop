@@ -44,6 +44,10 @@ export const filterKeys = [
 export function changeKind(values: FilterValues, kind: string): FilterValues {
   const next: FilterValues = { ...values, kind };
   for (const [key] of [...tyre, ...wheel]) delete next[key];
+  if (!kind) {
+    for (const [key] of common) delete next[key];
+    delete next.q;
+  }
   delete next.tread_min;
   delete next.tread_max;
   return next;
@@ -69,6 +73,12 @@ export function CatalogFilters({
   const [revision, setRevision] = useState(0);
   const kind = values.kind || "";
   useEffect(() => {
+    if (!kind) {
+      setOptions({});
+      setLoading(false);
+      setError("");
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setError("");
@@ -94,7 +104,7 @@ export function CatalogFilters({
     return () => controller.abort();
   }, [admin, kind, revision]);
   const fields = [
-    ...common,
+    ...(kind ? common : []),
     ...(kind === "tyre" ? tyre : kind === "wheel" ? wheel : []),
   ];
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -161,7 +171,7 @@ export function CatalogFilters({
       {loading && <p role="status">Загружаем параметры…</p>}
       <form key={JSON.stringify(values)} onSubmit={submit}>
         <fieldset className="filter-fields" disabled={disabled}>
-          {admin && (
+          {admin && kind && (
             <label>
               Поиск
               <input
