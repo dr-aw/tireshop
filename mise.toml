@@ -55,7 +55,7 @@ goose -env none -dir migrations/requests validate
 description = "Typecheck and format-check the frontend"
 run = '''
 tsc -p frontend
-prettier --check frontend/src frontend/index.html frontend/tsconfig.json frontend/vite.config.js frontend/e2e
+prettier --check frontend/src frontend/scripts frontend/*.html frontend/tsconfig.json frontend/vite.config.js frontend/e2e frontend/ssg-tests
 '''
 
 [tasks.build]
@@ -104,7 +104,7 @@ run = "TIRESHOP_BROWSER_TEST=1 bash scripts/test-db.sh"
 
 [tasks."frontend:build"]
 description = "Typecheck and build static frontend without Go or database access"
-run = "tsc -p frontend && vite build frontend"
+run = "tsc -p frontend && bun frontend/scripts/build.tsx"
 
 [tasks."infra:check"]
 description = "Validate Terraform and run mocked plans without cloud credentials"
@@ -118,3 +118,14 @@ terraform -chdir=deploy/terraform test -no-color
 [tasks."test:bootstrap"]
 description = "Verify production bootstrap on a disposable local DB without superuser rights"
 run = "bash scripts/test-production-bootstrap.sh"
+
+[tasks."test:ssg"]
+description = "Verify built HTML, hydration, navigation and HTTP 404 locally"
+run = '''
+export PLAYWRIGHT_TEST_MODULE="$(mise where npm:@playwright/test)/node_modules/@playwright/test"
+playwright test --config frontend/ssg-tests/playwright.config.cjs
+'''
+
+[tasks."test:ssg-build"]
+description = "Reject incomplete snapshots and verify safe HTML serialization"
+run = "node frontend/scripts/check-build.mjs"

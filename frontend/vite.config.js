@@ -1,5 +1,14 @@
 // The CLI is versioned by mise. API targets can be replaced by the test harness.
 export default {
+  build: {
+    rollupOptions: {
+      input: {
+        main: "frontend/index.html",
+        information: "frontend/information.html",
+        administrator: "frontend/administrator.html",
+      },
+    },
+  },
   server: {
     allowedHosts: ["dev"],
     proxy: {

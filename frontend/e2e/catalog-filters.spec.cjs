@@ -27,7 +27,7 @@ test("catalog filters paginate on the server, restore URL history and keep the c
     .click();
   await page
     .getByRole("navigation", { name: "Страницы каталога" })
-    .getByRole("button", { name: "Далее" })
+    .getByRole("link", { name: "Далее" })
     .click();
   await expect(page).toHaveURL(/page=2/);
   await expect(page.locator(".product")).toHaveCount(6);
@@ -39,7 +39,7 @@ test("catalog filters paginate on the server, restore URL history and keep the c
   await expect(page.locator(".cart-link b")).toHaveText("1");
   await page
     .getByRole("navigation", { name: "Страницы каталога" })
-    .getByRole("button", { name: "Назад" })
+    .getByRole("link", { name: "Назад" })
     .click();
   await expect(page.locator(".product")).toHaveCount(24);
   await page.goBack();
@@ -78,7 +78,7 @@ test("catalog filters paginate on the server, restore URL history and keep the c
       exact: true,
     }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Грузовые диски" }).click();
+  await page.getByRole("link", { name: "Грузовые диски" }).click();
   await expect(page).toHaveURL(/kind=wheel/);
   for (const label of ["Производитель", "Модель", "Состояние", "Год выпуска"])
     await expect(filters.getByLabel(label, { exact: true })).toHaveCount(0);

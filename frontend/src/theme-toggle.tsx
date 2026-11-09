@@ -12,13 +12,15 @@ function saved(): Theme | null {
   }
 }
 export function ThemeToggle() {
-  const [preference, setPreference] = useState(saved);
-  const [systemDark, setSystemDark] = useState(
-    () => matchMedia("(prefers-color-scheme: dark)").matches,
-  );
+  const [preference, setPreference] = useState<Theme | null>(null);
+  const [systemDark, setSystemDark] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const theme = preference ?? (systemDark ? "dark" : "light");
   useEffect(() => {
     const media = matchMedia("(prefers-color-scheme: dark)");
+    setPreference(saved());
+    setInitialized(true);
+    setSystemDark(media.matches);
     const update = () => setSystemDark(media.matches);
     const storage = (event: StorageEvent) => {
       if (event.key === key || event.key === null) setPreference(saved());
@@ -31,8 +33,8 @@ export function ThemeToggle() {
     };
   }, []);
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+    if (initialized) document.documentElement.dataset.theme = theme;
+  }, [theme, initialized]);
   const label =
     theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему";
   return (

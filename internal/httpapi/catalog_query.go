@@ -23,6 +23,9 @@ var numericCatalogFilters = map[string]bool{"production_year": true, "diameter":
 var tyreFilters = map[string]bool{"size": true, "tyre_width": true, "aspect_ratio": true, "rim_diameter": true, "season": true, "load_index": true, "speed_index": true, "tread_min": true, "tread_max": true}
 var wheelFilters = map[string]bool{"diameter": true, "width": true, "wheel_offset": true, "pcd": true, "wheel_type": true, "center_bore": true}
 
+// Keep the public default identical to the build-time snapshot ordering.
+const publicCatalogOrder = "EXISTS (SELECT 1 FROM catalog.product_images photo WHERE photo.product_id=p.product_id) DESC, p.product_id ASC"
+
 type catalogQuery struct {
 	Where, Order  string
 	Args          []any
@@ -35,6 +38,7 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 		q.Limit = 50
 	} else {
 		q.Where = "p.is_available"
+		q.Order = publicCatalogOrder
 	}
 	invalid := func() (catalogQuery, error) {
 		return q, fmt.Errorf("Проверьте параметры фильтров и страницы")

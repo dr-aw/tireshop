@@ -96,6 +96,7 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 		}{products, total})
 	})
 	mux.HandleFunc("GET /api/products/filters", catalogFacets(pool, false))
+	mux.HandleFunc("GET /api/products/snapshot", catalogSnapshot(pool))
 	mux.HandleFunc("GET /api/products/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		if !uuid.MatchString(id) {
