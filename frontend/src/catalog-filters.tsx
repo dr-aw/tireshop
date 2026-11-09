@@ -83,8 +83,13 @@ export function CatalogFilters({
   admin?: boolean;
   disabled?: boolean;
 }) {
-  const [initiallyOpen] = useState(
-    () => admin || window.matchMedia("(min-width: 641px)").matches,
+  const [initiallyOpen, setInitiallyOpen] = useState(admin);
+  useEffect(
+    () =>
+      setInitiallyOpen(
+        admin || window.matchMedia("(min-width: 641px)").matches,
+      ),
+    [admin],
   );
   const [options, setOptions] = useState<Record<string, string[]>>({});
   const [error, setError] = useState("");

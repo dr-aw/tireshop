@@ -88,3 +88,11 @@ mise run test:browser
 
 [Текущий план](PLANS.md) · [Правила работы](AGENTS.md) ·
 [Подробности окружения](docs/guides/environment.md)
+
+## Статическая витрина
+
+`mise run frontend:build` генерирует готовый HTML каталога, товаров и новых
+информационных страниц. Без источника снимка используются синтетические данные;
+для Render нужны явные `SITE_ORIGIN` и `SSG_CATALOG_URL`.
+Проверка артефакта: `mise run test:ssg`.
+[Сборка, маршруты и публикация SSG](docs/guides/static-storefront.md).

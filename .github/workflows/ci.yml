@@ -169,6 +169,9 @@ jobs:
         run: |
           mise run frontend:lint
           mise run frontend:build
+          mise run test:ssg-build
+          mise run test:ssg
+          mise exec -- node --test scripts/render-content-deploy.test.mjs
       - name: Check production DB bootstrap
         if: needs.repository.outputs.backend == 'true'
         run: mise run test:bootstrap
