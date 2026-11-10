@@ -1,3 +1,4 @@
+import { ContactMessengers } from "./contact-messengers";
 import { ContactMap } from "./contact-map";
 import { SiteHeader, SiteFooter, useCartCount } from "./site-shell";
 export function Information({ path }: { path: string }) {
@@ -103,7 +104,8 @@ export function Information({ path }: { path: string }) {
                 </div>
               </section>
             </div>
-            <a className="info-action" href="tel:+79256340399">
+            <ContactMessengers />
+            <a className="info-action contact-call" href="tel:+79256340399">
               Позвонить нам
             </a>
           </>
