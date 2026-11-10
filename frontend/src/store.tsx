@@ -658,7 +658,7 @@ function Store({ data, live }: { data: PageData; live: boolean }) {
           </a>
         )}
       </div>
-      <main className="wrap">
+      <main className={isCart ? "wrap cart-page" : "wrap"}>
         <noscript>
           <p>
             Каталог доступен без JavaScript. Для корзины и проверки актуальной
@@ -669,7 +669,9 @@ function Store({ data, live }: { data: PageData; live: boolean }) {
           <p role="alert">{catalogError}. Цена и наличие не подтверждены.</p>
         )}
         {isCart ? (
-          <h1 className="cart-title">Корзина</h1>
+          <a className="back-link" href="/">
+            ← Каталог
+          </a>
         ) : productID ? (
           products[0] ? (
             <ProductPage
@@ -1023,7 +1025,7 @@ function Store({ data, live }: { data: PageData; live: boolean }) {
         <section id="checkout" className="checkout">
           <div className="checkout-heading">
             <div>
-              <p className="eyebrow">ВАШ ВЫБОР</p>
+              <p className="eyebrow">{isCart ? "МУДРЫЙ ВЫБОР" : "ВАШ ВЫБОР"}</p>
               <h2>
                 {quick || attempt?.source === "quick"
                   ? "Быстрая заявка"
