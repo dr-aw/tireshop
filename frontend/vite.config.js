@@ -1,5 +1,10 @@
 // The CLI is versioned by mise. API targets can be replaced by the test harness.
 export default {
+  define: {
+    __PUBLIC_MEDIA_BASE__: JSON.stringify(
+      process.env.VITE_MEDIA_BASE_URL || "",
+    ),
+  },
   build: {
     rollupOptions: {
       input: {

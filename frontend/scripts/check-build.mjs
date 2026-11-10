@@ -54,13 +54,25 @@ try {
       items: [{ ...product, images: [] }, photographed],
     }),
   );
-  const ordered = run({});
+  const mediaBase = "https://storage.googleapis.com/tireshop-test";
+  const ordered = run({ VITE_MEDIA_BASE_URL: mediaBase });
   assert.equal(ordered.status, 0, ordered.stderr?.toString());
   const catalog = await readFile("frontend/dist/index.html", "utf8");
   const initial = JSON.parse(
     /id="page-data" type="application\/json">(.*?)<\/script>/.exec(catalog)[1],
   );
   assert.equal(initial.products[0].id, photographed.id);
+  assert(catalog.includes(`src="${mediaBase}/media/synthetic.webp"`));
+  const productHTML = await readFile(
+    `frontend/dist/products/${photographed.id}.html`,
+    "utf8",
+  );
+  const schema = JSON.parse(
+    /id="product-schema" type="application\/ld\+json">(.*?)<\/script>/.exec(
+      productHTML,
+    )[1],
+  );
+  assert.equal(schema.image[0], mediaBase + "/media/synthetic.webp");
   const attack = "$& </script><script>window.PWNED=true</script>";
   await writeFile(
     join(temp, "snapshot.json"),

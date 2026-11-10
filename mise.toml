@@ -129,3 +129,14 @@ playwright test --config frontend/ssg-tests/playwright.config.cjs
 [tasks."test:ssg-build"]
 description = "Reject incomplete snapshots and verify safe HTML serialization"
 run = "node frontend/scripts/check-build.mjs"
+
+[tasks."test:media"]
+description = "Verify direct image requests with a configured public media base"
+run = '''
+set -e
+trap 'VITE_MEDIA_BASE_URL= mise run frontend:build' EXIT
+export VITE_MEDIA_BASE_URL=https://storage.googleapis.com/tireshop-test
+mise run frontend:build
+export PLAYWRIGHT_TEST_MODULE="$(mise where npm:@playwright/test)/node_modules/@playwright/test"
+playwright test --config frontend/ssg-tests/playwright.config.cjs --grep 'direct media'
+'''

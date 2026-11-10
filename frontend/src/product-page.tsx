@@ -1,3 +1,4 @@
+import { mediaURL } from "./media-url";
 import {
   ProductPhotos,
   labelsFor,
@@ -47,7 +48,11 @@ export function ProductPage({
           />
           {!!p.images?.length && (
             <p>
-              <a href={p.images[0].url} target="_blank" rel="noreferrer">
+              <a
+                href={mediaURL(p.images[0].url)}
+                target="_blank"
+                rel="noreferrer"
+              >
                 Открыть полный кадр ↗
               </a>
             </p>

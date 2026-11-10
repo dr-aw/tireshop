@@ -1,3 +1,4 @@
+import { mediaURL } from "./media-url";
 import type { CatalogDetails } from "./catalog-details";
 export type Product = {
   id: string;
@@ -48,7 +49,7 @@ export function productSchema(p: Product, origin: string) {
     name: p.name,
     description: p.details?.description || p.name,
     sku: p.details?.sku || p.id,
-    image: p.images?.map((i) => new URL(i.url, origin).href),
+    image: p.images?.map((i) => new URL(mediaURL(i.url), origin).href),
     offers: {
       "@type": "Offer",
       url: new URL("/products/" + p.id, origin).href,

@@ -308,7 +308,11 @@ gcloud storage rsync ~/tireshop-media-upload/media \
 Для публичной проверки взять один точный путь из загруженных объектов и открыть:
 `https://storage.googleapis.com/tireshop-513806-product-media/media/products/...webp`.
 
-В Render Static Site добавить Rewrite:
+Для нового frontend предпочтительна прямая выдача: задать в Render
+`VITE_MEDIA_BASE_URL=https://storage.googleapis.com/tireshop-513806-product-media`
+и пересобрать frontend. [Подробности](static-storefront.md#прямые-фотографии-google-storage).
+
+Для совместимости прежнего frontend можно сохранить Rewrite:
 
 | Source | Destination | Action |
 | --- | --- | --- |

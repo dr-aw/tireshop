@@ -1,3 +1,4 @@
+import { mediaURL } from "./media-url";
 import { useRef, useState, type ReactNode } from "react";
 export type CatalogDetails = {
   tyre_width: number | null;
@@ -197,14 +198,14 @@ export function ProductPhotos({
       }}
     >
       <a
-        href={href || images[index]?.url}
+        href={href || mediaURL(images[index].url)}
         target={href ? undefined : "_blank"}
         rel={href ? undefined : "noreferrer"}
         aria-label={href ? `Открыть: ${name}` : undefined}
         className="catalog-photo-link"
       >
         <img
-          src={images[index]?.url}
+          src={mediaURL(images[index].url)}
           alt={`${name} — фото ${index + 1}`}
           width={1280}
           height={1280}
