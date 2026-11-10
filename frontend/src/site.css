@@ -83,6 +83,10 @@
   background: #bd171b;
   color: white;
 }
+.contact-call {
+  display: block;
+  width: 100%;
+}
 .contact-grid {
   display: grid;
   gap: 16px;
@@ -360,4 +364,85 @@ a.category-link {
   inset: 0;
   width: 100%;
   height: 100%;
+}
+.contact-messengers {
+  margin: 28px 0;
+  width: 100%;
+}
+.contact-messengers h2 {
+  font-size: 22px;
+  margin: 0 0 16px;
+}
+.messenger-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.messenger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 96px;
+  padding: 16px 6px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 650;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease;
+}
+.messenger-max {
+  --messenger-color: #5440af;
+  color: var(--messenger-color);
+  background: color-mix(in srgb, #6c4cff 10%, transparent);
+}
+.messenger-whatsapp {
+  --messenger-color: #087f47;
+  color: var(--messenger-color);
+  background: color-mix(in srgb, #25d366 12%, transparent);
+}
+.messenger-telegram {
+  --messenger-color: #176da6;
+  color: var(--messenger-color);
+  background: color-mix(in srgb, #229ed9 12%, transparent);
+}
+.messenger:hover,
+.messenger:focus-visible {
+  color: var(--messenger-color);
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border-color: currentColor;
+  transform: translateY(-2px);
+}
+[data-theme="dark"] .messenger-max {
+  --messenger-color: #b5a5ff;
+  color: var(--messenger-color);
+}
+[data-theme="dark"] .messenger-whatsapp {
+  --messenger-color: #65e49a;
+  color: var(--messenger-color);
+}
+[data-theme="dark"] .messenger-telegram {
+  --messenger-color: #75c8ff;
+  color: var(--messenger-color);
+}
+@media (max-width: 640px) {
+  .messenger-buttons {
+    gap: 8px;
+  }
+  .messenger {
+    font-size: 12px;
+    min-height: 84px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .messenger {
+    transition: none;
+  }
+  .messenger:hover,
+  .messenger:focus-visible {
+    transform: none;
+  }
 }
