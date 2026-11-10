@@ -1,3 +1,4 @@
+import { useAdjacentPreload } from "./photo-preload";
 import { mediaURL } from "./media-url";
 import { useRef, useState, type ReactNode } from "react";
 export type CatalogDetails = {
@@ -148,10 +149,18 @@ export function ProductPhotos({
   const [failed, setFailed] = useState(false);
   const gesture = useRef<{ id: number; x: number; y: number } | null>(null);
   const suppressClickUntil = useRef(0);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  useAdjacentPreload(
+    galleryRef,
+    (images || []).map((i) => mediaURL(i.url)),
+    index,
+    failed,
+  );
   if (!images?.length || failed) return <>{fallback}</>;
   return (
     <div
       className="catalog-photos"
+      ref={galleryRef}
       onPointerDown={(e) => {
         if (
           e.isPrimary &&
