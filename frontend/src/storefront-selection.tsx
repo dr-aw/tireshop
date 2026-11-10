@@ -7,7 +7,7 @@ type Option = {
   product_count: number;
   unit_count: string;
 };
-type Selection = { radii: Option[]; sizes: Option[] };
+type Selection = { diameters: Option[]; sizes: Option[] };
 export function DiameterIcon({ wheel = false }: { wheel?: boolean }) {
   return (
     <svg
@@ -33,7 +33,7 @@ export function DiameterIcon({ wheel = false }: { wheel?: boolean }) {
 const legacyLabels: Record<string, string> = {
   size: "Исходный размер",
   rim_diameter: "Диаметр шины",
-  diameter: "Диаметр диска",
+  radius: "Прежний диаметр",
 };
 export function StorefrontSelection({
   values,
@@ -64,9 +64,9 @@ export function StorefrontSelection({
       })
       .then((data: Selection) => {
         if (
-          !Array.isArray(data.radii) ||
+          !Array.isArray(data.diameters) ||
           !Array.isArray(data.sizes) ||
-          ![...data.radii, ...data.sizes].every(
+          ![...data.diameters, ...data.sizes].every(
             (o) =>
               typeof o.value === "string" &&
               typeof o.label === "string" &&
@@ -85,18 +85,18 @@ export function StorefrontSelection({
   const current = result?.query === query ? result : undefined;
   const data = current?.data;
   const sizeKey = kind === "tyre" ? "tyre_size" : "width";
-  function chooseRadius(value: string) {
+  function chooseDiameter(value: string) {
     const next = { ...values };
     for (const key of [
-      "radius",
-      "rim_diameter",
       "diameter",
+      "rim_diameter",
+      "radius",
       "size",
       "tyre_size",
       ...(kind === "wheel" ? ["width"] : []),
     ])
       delete next[key];
-    if (value !== values.radius) next.radius = value;
+    if (value !== values.diameter) next.diameter = value;
     apply(next);
   }
   function chooseSize(value: string) {
@@ -116,7 +116,8 @@ export function StorefrontSelection({
       : options;
   }
   const legacy = Object.keys(legacyLabels).filter((key) => values[key]);
-  if (kind === "wheel" && values.width && !values.radius) legacy.push("width");
+  if (kind === "wheel" && values.width && !values.diameter)
+    legacy.push("width");
   return (
     <>
       {kind && (
@@ -125,7 +126,7 @@ export function StorefrontSelection({
           aria-label="Подбор по размеру"
           aria-busy={!current}
         >
-          <h3>Диаметр, R</h3>
+          <h3>Диаметр, дюймы</h3>
           {!current && <p role="status">Загружаем размеры…</p>}
           {current?.error && (
             <p role="alert">
@@ -141,19 +142,21 @@ export function StorefrontSelection({
           )}
           {data && (
             <>
-              <div className="radius-options">
+              <div className="diameter-options">
                 {optionsWithSelection(
-                  data.radii,
-                  values.radius,
-                  `R${values.radius}`,
+                  data.diameters,
+                  values.diameter,
+                  kind === "wheel"
+                    ? `${values.diameter}″`
+                    : `R${values.diameter}`,
                 ).map((option) => (
                   <button
                     type="button"
                     key={option.value}
-                    className="radius-option"
-                    aria-pressed={values.radius === option.value}
+                    className="diameter-option"
+                    aria-pressed={values.diameter === option.value}
                     aria-label={`${option.label}, ${BigInt(option.unit_count).toLocaleString("ru-RU")} шт`}
-                    onClick={() => chooseRadius(option.value)}
+                    onClick={() => chooseDiameter(option.value)}
                   >
                     <DiameterIcon wheel={kind === "wheel"} />
                     <strong>{option.label}</strong>
@@ -163,22 +166,22 @@ export function StorefrontSelection({
                   </button>
                 ))}
               </div>
-              {!data.radii.length && !values.radius && (
+              {!data.diameters.length && !values.diameter && (
                 <p>Нет диаметров для этого подбора.</p>
               )}
-              {values.radius && (
+              {values.diameter && (
                 <>
-                  <h3>Размеры R{values.radius}</h3>
+                  <h3>Размеры {values.diameter}″</h3>
                   <div
                     className="size-options"
                     role="group"
-                    aria-label={`Размеры R${values.radius}`}
+                    aria-label={`Размеры ${values.diameter}″`}
                   >
                     {optionsWithSelection(
                       data.sizes,
                       values[sizeKey],
                       kind === "wheel"
-                        ? `${values.width}×${values.radius}`
+                        ? `${values.width}×${values.diameter}`
                         : values.tyre_size,
                     ).map((option) => (
                       <button
@@ -202,17 +205,17 @@ export function StorefrontSelection({
               )}
             </>
           )}
-          {(values.radius || values[sizeKey]) && (
+          {(values.diameter || values[sizeKey]) && (
             <button
               className="secondary selection-clear"
               type="button"
               onClick={() => {
                 const next = { ...values };
                 for (const key of [
-                  "radius",
+                  "diameter",
                   "tyre_size",
                   "width",
-                  "diameter",
+                  "radius",
                   "rim_diameter",
                   "size",
                 ])
@@ -243,7 +246,7 @@ export function StorefrontSelection({
           ))}
         </div>
       )}
-      {values.tyre_size && !values.radius && (
+      {values.tyre_size && !values.diameter && (
         <button
           type="button"
           className="secondary"

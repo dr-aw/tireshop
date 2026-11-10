@@ -19,8 +19,9 @@ type selectionOption struct {
 	UnitCount string `json:"unit_count"`
 }
 type selectionResponse struct {
-	Radii []selectionOption `json:"radii"`
-	Sizes []selectionOption `json:"sizes"`
+	Diameters []selectionOption `json:"diameters"`
+	Radii     []selectionOption `json:"radii"`
+	Sizes     []selectionOption `json:"sizes"`
 }
 
 // One statement provides both aggregates from the same database snapshot.
@@ -55,10 +56,12 @@ func selectionQuery(values url.Values) (string, []any, error) {
 	sizeValue, sizeLabel := "s.size_key", "s.size_key"
 	unit, width, profile := "s.width_unit", "s.width_value", "s.aspect_ratio"
 	sizePresent := "s.size_key IS NOT NULL"
+	diameterLabel := "'R' || trim_scale(s.diameter)::text"
 	if wheel {
 		table = "catalog.wheel_specs"
+		diameterLabel = "trim_scale(s.diameter)::text || '″'"
 		sizeValue = "trim_scale(s.width_inches)::text"
-		sizeLabel = sizeValue + " || '×' || trim_scale(s.radius)::text"
+		sizeLabel = sizeValue + " || '×' || trim_scale(s.diameter)::text"
 		unit, width, profile = "'in'::text", "s.width_inches", "NULL::numeric"
 		sizePresent = "s.width_inches IS NOT NULL"
 	}
@@ -66,7 +69,7 @@ func selectionQuery(values url.Values) (string, []any, error) {
 	for _, key := range []string{"radius", "rim_diameter", "diameter"} {
 		if value := values.Get(key); value != "" {
 			q.Args = append(q.Args, value) // validated above; retain exact decimal precision
-			diameterConditions = append(diameterConditions, fmt.Sprintf("s.radius=$%d", len(q.Args)))
+			diameterConditions = append(diameterConditions, fmt.Sprintf("s.diameter=$%d", len(q.Args)))
 		}
 	}
 	diameterWhere := "FALSE"
@@ -76,11 +79,11 @@ func selectionQuery(values url.Values) (string, []any, error) {
 	from := " FROM catalog.product_details p JOIN " + table + " s USING(product_id) WHERE " + q.Where
 	count := "count(*) AS product_count, sum(p.stock::bigint * p.units_per_sale::bigint)::text AS unit_count"
 	sql := `SELECT section,value,label,product_count,unit_count FROM (
- SELECT 0 AS section,trim_scale(s.radius)::text AS value,'R' || trim_scale(s.radius)::text AS label,` + count + `,
- ''::text AS sort_unit,s.radius AS sort_width,NULL::numeric AS sort_profile` + from + ` AND s.radius IS NOT NULL GROUP BY s.radius
+ SELECT 0 AS section,trim_scale(s.diameter)::text AS value,` + diameterLabel + ` AS label,` + count + `,
+ ''::text AS sort_unit,s.diameter AS sort_width,NULL::numeric AS sort_profile` + from + ` AND s.diameter IS NOT NULL GROUP BY s.diameter
  UNION ALL
  SELECT 1,` + sizeValue + `,` + sizeLabel + `,` + count + `,` + unit + `,` + width + `,` + profile + from + ` AND ` + diameterWhere + ` AND ` + sizePresent + `
- GROUP BY s.radius,` + sizeValue + `,` + unit + `,` + width + `,` + profile + `
+ GROUP BY s.diameter,` + sizeValue + `,` + unit + `,` + width + `,` + profile + `
  ) choices ORDER BY section,sort_unit,sort_width,sort_profile NULLS FIRST,value`
 	return sql, q.Args, nil
 }
@@ -118,6 +121,7 @@ func catalogSelection(pool *pgxpool.Pool) http.HandlerFunc {
 			fail(w, 503, "unavailable", "Подбор временно недоступен")
 			return
 		}
+		response.Diameters = response.Radii
 		w.Header().Set("Cache-Control", "no-store")
 		writeJSON(w, 200, response)
 	}

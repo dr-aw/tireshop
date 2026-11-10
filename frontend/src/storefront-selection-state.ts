@@ -4,9 +4,11 @@ import {
   type FilterValues,
 } from "./catalog-filters";
 
-export const selectionKeys = ["radius", "tyre_size"];
+export const selectionKeys = ["diameter", "radius", "tyre_size"];
 export function cleanStorefrontFilters(values: FilterValues): FilterValues {
   const next = cleanCategoryFilters(values);
+  // The shared admin cleaner still treats diameter as a wheel editor field.
+  if (values.diameter) next.diameter = values.diameter;
   const allowed = new Set([
     "kind",
     "q",
@@ -16,26 +18,25 @@ export function cleanStorefrontFilters(values: FilterValues): FilterValues {
     "price_min",
     "price_max",
     "in_stock",
-    "radius",
+    ...(values.kind ? ["diameter", "radius"] : []),
     ...(values.kind === "tyre" ? ["tyre_size", "size", "rim_diameter"] : []),
     ...(values.kind === "wheel"
-      ? ["width", "diameter", "pcd", "wheel_offset", "center_bore"]
+      ? ["width", "pcd", "wheel_offset", "center_bore"]
       : []),
   ]);
   for (const key of Object.keys(next)) if (!allowed.has(key)) delete next[key];
-  if (!next.kind) delete next.radius;
-  if (next.kind !== "tyre") delete next.tyre_size;
-  const legacy = next.kind === "tyre" ? "rim_diameter" : "diameter";
-  if (
-    next[legacy] &&
-    Number.isFinite(Number(next[legacy])) &&
-    Number(next[legacy]) > 0
-  ) {
-    if (!next.radius) next.radius = String(Number(next[legacy]));
-    if (Number(next.radius) === Number(next[legacy])) delete next[legacy];
+  for (const legacy of ["radius", "rim_diameter"]) {
+    if (
+      next[legacy] &&
+      Number.isFinite(Number(next[legacy])) &&
+      Number(next[legacy]) > 0
+    ) {
+      if (!next.diameter) next.diameter = String(Number(next[legacy]));
+      if (Number(next.diameter) === Number(next[legacy])) delete next[legacy];
+    }
   }
-  if (next.radius && Number.isFinite(Number(next.radius)))
-    next.radius = String(Number(next.radius));
+  if (next.diameter && Number.isFinite(Number(next.diameter)))
+    next.diameter = String(Number(next.diameter));
   return next;
 }
 export function changeStorefrontKind(

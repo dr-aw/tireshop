@@ -337,8 +337,20 @@ export function DetailsEditor({
                     : undefined
                 }
                 type={numeric ? "number" : "text"}
-                min={key === "tread_percent" ? 0 : undefined}
-                max={key === "tread_percent" ? 100 : undefined}
+                min={
+                  key === "tread_percent"
+                    ? 0
+                    : key === "diameter"
+                      ? 11
+                      : undefined
+                }
+                max={
+                  key === "tread_percent"
+                    ? 100
+                    : key === "diameter"
+                      ? 25
+                      : undefined
+                }
                 step="any"
                 value={value[key] ?? ""}
                 onChange={(e) =>
@@ -357,7 +369,8 @@ export function DetailsEditor({
               {key === "size" && value.kind === "tyre" && (
                 <small id="tyre-size-help" className="fineprint">
                   Укажите полный размер, например 205/85R16. Посадочный диаметр
-                  (16″) заполнится автоматически при сохранении.
+                  (16″) заполнится автоматически при сохранении. Допустимый
+                  диаметр — от 11 до 25 дюймов.
                 </small>
               )}
             </label>

@@ -1773,12 +1773,12 @@ footer {
   font-size: 13px;
   font-weight: 600;
 }
-.radius-options {
+.diameter-options {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px 2px;
 }
-.radius-option {
+.diameter-option {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1790,26 +1790,26 @@ footer {
   border: 0;
   border-radius: 16px;
 }
-.radius-option svg {
+.diameter-option svg {
   width: 54px;
   height: 54px;
   padding: 6px;
   border-radius: 50%;
   color: #aaa;
 }
-.radius-option strong {
+.diameter-option strong {
   font-size: 12px;
 }
-.radius-option small {
+.diameter-option small {
   font-size: 11px;
   font-weight: 400;
 }
-.radius-option:hover,
-.radius-option[aria-pressed="true"] {
+.diameter-option:hover,
+.diameter-option[aria-pressed="true"] {
   color: var(--red);
   background: transparent;
 }
-.radius-option[aria-pressed="true"] svg {
+.diameter-option[aria-pressed="true"] svg {
   color: var(--red);
   background: rgb(235 30 25 / 8%);
 }
@@ -1871,11 +1871,11 @@ footer {
   max-width: 100%;
 }
 @media (max-width: 640px) {
-  .radius-options {
+  .diameter-options {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
-.radius-option small {
+.diameter-option small {
   max-width: 100%;
   overflow-wrap: anywhere;
 }

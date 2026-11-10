@@ -24,7 +24,7 @@ mise exec -- goose -env none -dir migrations/catalog -table catalog.goose_db_ver
 psql -X -v ON_ERROR_STOP=1 <<'SQL'
 CREATE TABLE public.selection_migration_before AS SELECT to_jsonb(p) AS value FROM catalog.product_details p;
 SQL
-mise exec -- goose -env none -dir migrations/catalog -table catalog.goose_db_version up
+mise exec -- goose -env none -dir migrations/catalog -table catalog.goose_db_version up-to 5
 psql -X -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM public.selection_migration_before b

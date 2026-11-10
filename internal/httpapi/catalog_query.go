@@ -21,7 +21,7 @@ import (
 var catalogFilterFields = []string{"brand", "model", "size", "condition", "production_year", "diameter", "width", "season", "load_index", "speed_index", "wheel_offset", "pcd", "wheel_type", "center_bore", "tyre_width", "aspect_ratio", "rim_diameter"}
 var numericCatalogFilters = map[string]bool{"production_year": true, "diameter": true, "width": true, "wheel_offset": true, "center_bore": true, "aspect_ratio": true, "rim_diameter": true}
 var tyreFilters = map[string]bool{"size": true, "tyre_width": true, "aspect_ratio": true, "rim_diameter": true, "season": true, "load_index": true, "speed_index": true, "tread_min": true, "tread_max": true}
-var wheelFilters = map[string]bool{"diameter": true, "width": true, "wheel_offset": true, "pcd": true, "wheel_type": true, "center_bore": true}
+var wheelFilters = map[string]bool{"width": true, "wheel_offset": true, "pcd": true, "wheel_type": true, "center_bore": true}
 
 // Keep the public default identical to the build-time snapshot ordering.
 const publicCatalogOrder = "EXISTS (SELECT 1 FROM catalog.product_images photo WHERE photo.product_id=p.product_id) DESC, p.product_id ASC"
@@ -81,7 +81,7 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 		add("p.kind=$%d", kind)
 	}
 	// Match stored indexed dimensions, without applying functions to their columns.
-	if values.Get("radius") != "" || values.Get("tyre_size") != "" {
+	if values.Get("radius") != "" || values.Get("diameter") != "" || values.Get("tyre_size") != "" {
 		if kind == "" || (values.Get("tyre_size") != "" && kind != "tyre") {
 			return invalid()
 		}
@@ -90,13 +90,15 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 			table = "catalog.wheel_specs"
 		}
 		conditions := []string{}
-		if radius := values.Get("radius"); radius != "" {
-			n, err := strconv.ParseFloat(radius, 64)
-			if err != nil || math.IsNaN(n) || math.IsInf(n, 0) || n <= 0 || n > 10000 {
-				return invalid()
+		for _, key := range []string{"radius", "diameter"} {
+			if radius := values.Get(key); radius != "" {
+				n, err := strconv.ParseFloat(radius, 64)
+				if err != nil || math.IsNaN(n) || math.IsInf(n, 0) || n <= 0 || n > 10000 {
+					return invalid()
+				}
+				q.Args = append(q.Args, radius)
+				conditions = append(conditions, fmt.Sprintf("diameter=$%d", len(q.Args)))
 			}
-			q.Args = append(q.Args, radius)
-			conditions = append(conditions, fmt.Sprintf("radius=$%d", len(q.Args)))
 		}
 		if size := values.Get("tyre_size"); size != "" {
 			if utf8.RuneCountInString(size) > 200 {
@@ -122,6 +124,9 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 		add("(p.name || ' ' || coalesce(p.sku,'') || ' ' || coalesce(p.size,'')) ILIKE $%d", "%"+search+"%")
 	}
 	for _, field := range catalogFilterFields {
+		if field == "diameter" {
+			continue
+		}
 		value := values.Get(field)
 		if value == "" {
 			continue

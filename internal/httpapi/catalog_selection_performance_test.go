@@ -58,12 +58,12 @@ func TestSelectionPerformance(t *testing.T) {
 		for _, indexed := range []bool{false, true} {
 			ddl := `DROP INDEX catalog.tyre_specs_selection_idx; DROP INDEX catalog.wheel_specs_selection_idx;`
 			if indexed {
-				ddl = `CREATE INDEX tyre_specs_selection_idx ON catalog.tyre_specs(radius,size_key,product_id); CREATE INDEX wheel_specs_selection_idx ON catalog.wheel_specs(radius,width_inches,product_id);`
+				ddl = `CREATE INDEX tyre_specs_selection_idx ON catalog.tyre_specs(diameter,size_key,product_id); CREATE INDEX wheel_specs_selection_idx ON catalog.wheel_specs(diameter,width_inches,product_id);`
 			}
 			if _, err := db.Exec(t.Context(), ddl); err != nil {
 				t.Fatal(err)
 			}
-			cases := []string{"kind=tyre&radius=17.5", "kind=tyre&radius=19.5&tyre_size=205%2F60R19.5", "kind=tyre&radius=17.5&offset=960", "kind=tyre&radius=17.5&sort=unit_price_rub", "kind=wheel&radius=17.5&width=6.75&pcd=6x222.25&in_stock=true"}
+			cases := []string{"kind=tyre&diameter=17.5", "kind=tyre&diameter=19.5&tyre_size=205%2F60R19.5", "kind=tyre&diameter=17.5&offset=960", "kind=tyre&diameter=17.5&sort=unit_price_rub", "kind=wheel&diameter=17.5&width=6.75&pcd=6x222.25&in_stock=true"}
 			for _, query := range cases {
 				values, _ := url.ParseQuery(query + "&brand=Selection+benchmark")
 				q, err := parseCatalogQuery(values, false)
@@ -118,7 +118,7 @@ func TestSelectionPerformance(t *testing.T) {
 				}
 			}
 		}
-		for _, path := range []string{"/api/products?kind=tyre&radius=17.5&brand=Selection+benchmark", "/api/products/selection?kind=tyre&radius=17.5&brand=Selection+benchmark", "/api/products/selection?kind=wheel&radius=17.5&pcd=6x222.25&brand=Selection+benchmark"} {
+		for _, path := range []string{"/api/products?kind=tyre&diameter=17.5&brand=Selection+benchmark", "/api/products/selection?kind=tyre&diameter=17.5&brand=Selection+benchmark", "/api/products/selection?kind=wheel&diameter=17.5&pcd=6x222.25&brand=Selection+benchmark"} {
 			var wg sync.WaitGroup
 			var mu sync.Mutex
 			times := []float64{}

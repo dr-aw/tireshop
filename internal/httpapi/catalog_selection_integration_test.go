@@ -26,7 +26,7 @@ func TestStorefrontSelection(t *testing.T) {
  RETURNING product_id,name)
  INSERT INTO catalog.tyre_specs(product_id,size) SELECT product_id,CASE name
  WHEN 'Select A' THEN '195/70R17.5' WHEN 'Select B' THEN '195/70 r17,50'
- WHEN 'Select C' THEN '205/60R17.5' WHEN 'Select secret' THEN '225/80R99'
+ WHEN 'Select C' THEN '205/60R17.5' WHEN 'Select secret' THEN '225/80R24.5'
  WHEN 'Select other' THEN '7.50R16' ELSE '322' END FROM p;
  WITH p AS (INSERT INTO catalog.products(name,kind,brand,stock,units_per_sale,unit_price_rub)
  VALUES ('Select wheel','wheel','Selection fixture',2,4,100) RETURNING product_id)
@@ -58,6 +58,10 @@ func TestStorefrontSelection(t *testing.T) {
 		}
 		return r
 	}
+	canonical := selectOptions("kind=tyre&diameter=17.5")
+	if len(canonical.Diameters) != 2 || len(canonical.Radii) != 2 || len(canonical.Sizes) != 2 {
+		t.Fatal(canonical)
+	}
 	r := selectOptions("kind=tyre&radius=17.5&tyre_size=195%2F70R17.5")
 	if len(r.Radii) != 2 || r.Radii[0].Value != "16" || r.Radii[1].UnitCount != "8" || r.Radii[1].ProductCount != 3 || len(r.Sizes) != 2 || r.Sizes[0].Value != "195/70R17.5" || r.Sizes[0].UnitCount != "8" || r.Sizes[1].UnitCount != "0" {
 		t.Fatalf("wrong aggregation: %+v", r)
@@ -78,10 +82,12 @@ func TestStorefrontSelection(t *testing.T) {
 		t.Fatal(r)
 	}
 	for query, want := range map[string]int{
-		"kind=tyre&radius=17.5&tyre_size=195%2F70R17.5": 2,
-		"kind=tyre&size=195%2F70R17.5":                  1,
-		"kind=tyre&radius=16&tyre_size=195%2F70R17.5":   0,
-		"kind=wheel&radius=17.5&width=6.75":             1,
+		"kind=tyre&radius=17.5&tyre_size=195%2F70R17.5":   2,
+		"kind=tyre&diameter=17.5&tyre_size=195%2F70R17.5": 2,
+		"kind=tyre&diameter=17.5&radius=16":               0,
+		"kind=tyre&size=195%2F70R17.5":                    1,
+		"kind=tyre&radius=16&tyre_size=195%2F70R17.5":     0,
+		"kind=wheel&radius=17.5&width=6.75":               1,
 	} {
 		var data struct {
 			Total int `json:"total"`

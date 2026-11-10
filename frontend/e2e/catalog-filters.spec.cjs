@@ -54,7 +54,7 @@ test("catalog filters paginate on the server, restore URL history and keep the c
   }
   await page.getByRole("button", { name: /^R22\.5, / }).click();
   await page.getByRole("button", { name: /^315\/70R22\.5 / }).click();
-  await expect(page).toHaveURL(/radius=22.5/);
+  await expect(page).toHaveURL(/diameter=22.5/);
   await expect(page).toHaveURL(/tyre_size=/);
   await filters.getByLabel("Цена, ₽: от", { exact: true }).fill("1025");
   await filters.getByRole("button", { name: "Применить", exact: true }).click();
@@ -188,6 +188,14 @@ test("typed editor derives tyre dimensions and clears them when changing kind", 
   await expect(row).toHaveCount(1);
   const href = await row.locator(".admin-product-link").getAttribute("href");
   await row.getByRole("button", { name: "Изменить" }).click();
+  await page.getByLabel("Размер шины", { exact: true }).fill("205/85R26");
+  await page.getByRole("button", { name: "Сохранить товар" }).click();
+  await expect(
+    page.getByText(
+      "Посадочный диаметр должен быть от 11 до 25 дюймов включительно",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await page.getByLabel("Размер шины", { exact: true }).fill("11R22.5");
   await page.getByRole("button", { name: "Сохранить товар" }).click();
   await expect(page.locator(".admin-notice")).toHaveText("Товар сохранён");

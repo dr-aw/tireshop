@@ -24,7 +24,7 @@ test("selection follows the mockup, counts physical units, and restores history"
   expect(all.y + all.height).toBeLessThan(tyre.y);
   expect(tyre.y).toBe(wheel.y);
   await categories.getByRole("link", { name: "Диски", exact: true }).click();
-  await page.getByRole("button", { name: "R17.5, 2 шт", exact: true }).click();
+  await page.getByRole("button", { name: "17.5″, 2 шт", exact: true }).click();
   const size = page.getByRole("button", {
     name: "6.75×17.5 2 шт",
     exact: true,
@@ -40,14 +40,14 @@ test("selection follows the mockup, counts physical units, and restores history"
   await page
     .getByRole("button", { name: "Сбросить размер", exact: true })
     .click();
-  await expect(page).not.toHaveURL(/radius=/);
+  await expect(page).not.toHaveURL(/diameter=/);
   await page.goBack();
   await expect(size).toHaveAttribute("aria-pressed", "true");
   await categories.getByRole("link", { name: "Шины", exact: true }).click();
-  await expect(page).not.toHaveURL(/radius=|width=/);
+  await expect(page).not.toHaveURL(/diameter=|width=/);
   await page.getByRole("button", { name: /^R22\.5, / }).click();
   await expect(
-    page.getByRole("group", { name: "Размеры R22.5", exact: true }),
+    page.getByRole("group", { name: "Размеры 22.5″", exact: true }),
   ).toBeVisible();
   for (const width of [320, 390, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
@@ -79,7 +79,7 @@ test("selection handles failures, stale replies and legacy restrictions", async 
     else await route.continue();
   });
   await page.goto(
-    "/?kind=tyre&rim_diameter=22.5&size=315%2F70R22.5&tyre_width=315+mm",
+    "/?kind=tyre&radius=22.5&size=315%2F70R22.5&tyre_width=315+mm",
   );
   await expect(page.getByText("Не удалось загрузить подбор.")).toBeVisible();
   await expect(
@@ -107,13 +107,15 @@ test("selection handles failures, stale replies and legacy restrictions", async 
     })
     .click();
   await expect(page).not.toHaveURL(/[?&]size=/);
+  await expect(page).not.toHaveURL(/[?&]radius=/);
+  await expect(page).toHaveURL(/diameter=22.5/);
   await page.unroute("**/api/products/selection?**");
   await page.route("**/api/products/selection?**", async (route) => {
     if (route.request().url().includes("kind=tyre")) {
       await new Promise((resolve) => setTimeout(resolve, 350));
       await route.fulfill({
         json: {
-          radii: [
+          diameters: [
             { value: "99", label: "R99", product_count: 1, unit_count: "999" },
           ],
           sizes: [],
@@ -128,13 +130,13 @@ test("selection handles failures, stale replies and legacy restrictions", async 
   await categories.getByRole("link", { name: "Шины", exact: true }).click();
   await categories.getByRole("link", { name: "Диски", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "R17.5, 2 шт", exact: true }),
+    page.getByRole("button", { name: "17.5″, 2 шт", exact: true }),
   ).toBeVisible();
   await page.waitForTimeout(450);
   await expect(page.getByRole("button", { name: /^R99/ })).toHaveCount(0);
-  await page.goto("/?kind=wheel&radius=99&width=123");
+  await page.goto("/?kind=wheel&diameter=99&width=123");
   await expect(
-    page.getByRole("button", { name: "R99, 0 шт", exact: true }),
+    page.getByRole("button", { name: "99″, 0 шт", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(
     page.getByRole("button", { name: "123×99 0 шт", exact: true }),
@@ -143,7 +145,7 @@ test("selection handles failures, stale replies and legacy restrictions", async 
     .getByRole("button", { name: "Сбросить размер", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "R17.5, 2 шт", exact: true }),
+    page.getByRole("button", { name: "17.5″, 2 шт", exact: true }),
   ).toBeVisible();
 });
 

@@ -289,7 +289,7 @@ export function CatalogFilters({
                 const next = { ...values };
                 for (const key of [
                   ...filterKeys,
-                  ...(storefront ? ["radius", "tyre_size"] : []),
+                  ...(storefront ? ["radius", "diameter", "tyre_size"] : []),
                   ...(admin ? ["q"] : []),
                 ])
                   delete next[key];

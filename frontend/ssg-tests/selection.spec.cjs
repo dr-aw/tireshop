@@ -27,13 +27,15 @@ test("SSG category hydrates into selection with keyboard, URL and canonical supp
   await page.route("**/api/products/selection?**", (route) =>
     route.fulfill({
       json: {
-        radii: [13, 14, 15, 15.5, 16, 17.5, 19.5, 20, 22.5].map((value) => ({
-          value: String(value),
-          label: `R${value}`,
-          product_count: 2,
-          unit_count: value === 17.5 ? "900719925474099100" : "8",
-        })),
-        sizes: route.request().url().includes("radius=17.5")
+        diameters: [13, 14, 15, 15.5, 16, 17.5, 19.5, 20, 22.5].map(
+          (value) => ({
+            value: String(value),
+            label: `R${value}`,
+            product_count: 2,
+            unit_count: value === 17.5 ? "900719925474099100" : "8",
+          }),
+        ),
+        sizes: route.request().url().includes("diameter=17.5")
           ? [
               {
                 value: "195/70R17.5",
