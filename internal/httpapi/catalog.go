@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json/v2"
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 	"time"
@@ -67,8 +66,8 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 			fail(w, 503, "unavailable", "Каталог временно недоступен")
 			return
 		}
-		args := append(query.Args, query.Limit, query.Offset)
-		rows, err := pool.Query(ctx, "SELECT "+productColumns+" FROM catalog.product_details p WHERE "+query.Where+" ORDER BY "+query.Order+fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args)), args...)
+		sql, args := publicCatalogPageQuery(query)
+		rows, err := pool.Query(ctx, sql, args...)
 
 		if err != nil {
 			fail(w, 503, "unavailable", "Каталог временно недоступен")
@@ -95,6 +94,7 @@ func Catalog(pool *pgxpool.Pool) http.Handler {
 			Total int          `json:"total"`
 		}{products, total})
 	})
+	mux.HandleFunc("GET /api/products/selection", catalogSelection(pool))
 	mux.HandleFunc("GET /api/products/filters", catalogFacets(pool, false))
 	mux.HandleFunc("GET /api/products/snapshot", catalogSnapshot(pool))
 	mux.HandleFunc("GET /api/products/{id}", func(w http.ResponseWriter, r *http.Request) {

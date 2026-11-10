@@ -36,7 +36,10 @@ bash scripts/db-migrate.sh
 # Run up again to check repeatability, without dropping data.
 bash scripts/db-migrate.sh
 export TIRESHOP_TEST_DB="$PGDATABASE"
-mise exec -- go test -race -count=1 -p 1 -tags=integration ./internal/requests/postgres ./internal/httpapi
+(unset TIRESHOP_SELECTION_BENCH; mise exec -- go test -race -count=1 -p 1 -tags=integration ./internal/requests/postgres ./internal/httpapi)
+if [[ "${TIRESHOP_SELECTION_BENCH:-}" == 1 ]]; then
+  mise exec -- go test -count=1 -v -tags=integration ./internal/httpapi -run '^TestSelectionPerformance$'
+fi
 # Confirm that up also preserves fixtures and requests written by the tests.
 before_count=$(psql -X -At -v ON_ERROR_STOP=1 -c 'SELECT count(*) FROM requests.requests')
 bash scripts/db-migrate.sh

@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 // The CLI is versioned by mise. API targets can be replaced by the test harness.
 export default {
   define: {
@@ -8,9 +10,13 @@ export default {
   build: {
     rollupOptions: {
       input: {
-        main: "frontend/index.html",
-        information: "frontend/information.html",
-        administrator: "frontend/administrator.html",
+        main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        information: fileURLToPath(
+          new URL("./information.html", import.meta.url),
+        ),
+        administrator: fileURLToPath(
+          new URL("./administrator.html", import.meta.url),
+        ),
       },
     },
   },

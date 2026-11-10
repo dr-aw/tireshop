@@ -19,10 +19,9 @@ test("phone formatting and numeric limits in shop and administration", async ({
   await expect(filters.getByLabel("Цена, ₽: от", { exact: true })).toHaveValue(
     "0",
   );
-  await filters.getByLabel("Протектор, %: до", { exact: true }).fill("150");
   await expect(
     filters.getByLabel("Протектор, %: до", { exact: true }),
-  ).toHaveValue("100");
+  ).toHaveCount(0);
   await page.goto("/administrator");
   await page.getByLabel("Логин", { exact: true }).fill("browser-admin");
   await page

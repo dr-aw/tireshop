@@ -11,7 +11,8 @@ import {
 } from "./page-data";
 import { ProductGrid } from "./product-grid";
 import { PhoneInput, phoneNumber, displayPhone } from "./phone";
-import { CatalogFilters, changeKind } from "./catalog-filters";
+import { StorefrontSelection, DiameterIcon } from "./storefront-selection";
+import { changeStorefrontKind } from "./storefront-selection-state";
 import { useCatalogNavigation } from "./catalog-navigation";
 import { OrderSteps } from "./order-steps";
 import {
@@ -715,38 +716,40 @@ function Store({ data, live }: { data: PageData; live: boolean }) {
             <div className="catalog-layout" id="catalog">
               <aside className="filters" aria-label="Категории каталога">
                 <h2>Каталог</h2>
-                {[
-                  ["", "Все товары"],
-                  ["tyre", "Грузовые шины"],
-                  ["wheel", "Грузовые диски"],
-                ].map(([value, label]) => (
-                  <a
-                    href={categoryPath(value)}
-                    key={value}
-                    className={
-                      category === value
-                        ? "category-link selected"
-                        : "category-link"
-                    }
-                    aria-current={category === value ? "page" : undefined}
-                    onClick={(event) => {
-                      if (
-                        event.button !== 0 ||
-                        event.metaKey ||
-                        event.ctrlKey ||
-                        event.shiftKey ||
-                        event.altKey
-                      )
-                        return;
-                      event.preventDefault();
-                      navigateCatalog(changeKind(filters, value));
-                    }}
-                  >
-                    <span>{label}</span>
-                    <span aria-hidden="true">↗</span>
-                  </a>
-                ))}
-                <CatalogFilters values={filters} apply={navigateCatalog} />
+                <div className="selection-categories">
+                  {[
+                    ["", "Все товары"],
+                    ["tyre", "Шины"],
+                    ["wheel", "Диски"],
+                  ].map(([value, label]) => (
+                    <a
+                      href={categoryPath(value)}
+                      key={value}
+                      className={
+                        category === value
+                          ? "category-link selected"
+                          : "category-link"
+                      }
+                      aria-current={category === value ? "page" : undefined}
+                      onClick={(event) => {
+                        if (
+                          event.button !== 0 ||
+                          event.metaKey ||
+                          event.ctrlKey ||
+                          event.shiftKey ||
+                          event.altKey
+                        )
+                          return;
+                        event.preventDefault();
+                        navigateCatalog(changeStorefrontKind(filters, value));
+                      }}
+                    >
+                      {value && <DiameterIcon wheel={value === "wheel"} />}
+                      <span>{label}</span>
+                    </a>
+                  ))}
+                </div>
+                <StorefrontSelection values={filters} apply={navigateCatalog} />
                 <div className="selection-note">
                   <span className="note-icon" aria-hidden="true">
                     ↗

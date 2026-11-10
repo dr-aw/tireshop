@@ -43,7 +43,7 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 	invalid := func() (catalogQuery, error) {
 		return q, fmt.Errorf("Проверьте параметры фильтров и страницы")
 	}
-	allowed := map[string]bool{"q": true, "kind": true, "sort": true, "direction": true, "limit": true, "offset": true, "price_min": true, "price_max": true, "tread_min": true, "tread_max": true, "in_stock": true}
+	allowed := map[string]bool{"q": true, "kind": true, "sort": true, "direction": true, "limit": true, "offset": true, "price_min": true, "price_max": true, "tread_min": true, "tread_max": true, "in_stock": true, "radius": true, "tyre_size": true}
 	for _, f := range catalogFilterFields {
 		allowed[f] = true
 	}
@@ -79,6 +79,33 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 	}
 	if kind != "" {
 		add("p.kind=$%d", kind)
+	}
+	// Match stored indexed dimensions, without applying functions to their columns.
+	if values.Get("radius") != "" || values.Get("tyre_size") != "" {
+		if kind == "" || (values.Get("tyre_size") != "" && kind != "tyre") {
+			return invalid()
+		}
+		table := "catalog.tyre_specs"
+		if kind == "wheel" {
+			table = "catalog.wheel_specs"
+		}
+		conditions := []string{}
+		if radius := values.Get("radius"); radius != "" {
+			n, err := strconv.ParseFloat(radius, 64)
+			if err != nil || math.IsNaN(n) || math.IsInf(n, 0) || n <= 0 || n > 10000 {
+				return invalid()
+			}
+			q.Args = append(q.Args, radius)
+			conditions = append(conditions, fmt.Sprintf("radius=$%d", len(q.Args)))
+		}
+		if size := values.Get("tyre_size"); size != "" {
+			if utf8.RuneCountInString(size) > 200 {
+				return invalid()
+			}
+			q.Args = append(q.Args, size)
+			conditions = append(conditions, fmt.Sprintf("size_key=$%d", len(q.Args)))
+		}
+		q.Where += " AND p.product_id IN (SELECT product_id FROM " + table + " WHERE " + strings.Join(conditions, " AND ") + ")"
 	}
 	for key := range values {
 		if values.Get(key) != "" && ((kind != "wheel" && wheelFilters[key]) || (kind != "tyre" && tyreFilters[key])) {
@@ -296,4 +323,14 @@ func sortedFacets(sets map[string]map[string]bool) map[string][]string {
 		result[field] = options
 	}
 	return result
+}
+
+// Materialize only the page IDs before constructing JSON details and reading photos.
+// Applying the same order again to the small page preserves the public contract.
+func publicCatalogPageQuery(q catalogQuery) (string, []any) {
+	args := append(append([]any(nil), q.Args...), q.Limit, q.Offset)
+	sql := "WITH selected AS MATERIALIZED (SELECT p.product_id FROM catalog.product_details p WHERE " + q.Where +
+		" ORDER BY " + q.Order + fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args)) +
+		") SELECT " + productColumns + " FROM selected JOIN catalog.product_details p USING(product_id) ORDER BY " + q.Order
+	return sql, args
 }

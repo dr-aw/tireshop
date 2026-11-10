@@ -77,19 +77,21 @@ export function CatalogFilters({
   apply,
   admin = false,
   disabled = false,
+  storefront = false,
 }: {
   values: FilterValues;
   apply: (values: FilterValues) => void;
   admin?: boolean;
   disabled?: boolean;
+  storefront?: boolean;
 }) {
   const [initiallyOpen, setInitiallyOpen] = useState(admin);
   useEffect(
     () =>
       setInitiallyOpen(
-        admin || window.matchMedia("(min-width: 641px)").matches,
+        storefront || admin || window.matchMedia("(min-width: 641px)").matches,
       ),
-    [admin],
+    [admin, storefront],
   );
   const [options, setOptions] = useState<Record<string, string[]>>({});
   const [error, setError] = useState("");
@@ -97,7 +99,7 @@ export function CatalogFilters({
   const [revision, setRevision] = useState(0);
   const kind = values.kind || "";
   useEffect(() => {
-    if (!kind) {
+    if (!kind || (storefront && kind !== "wheel")) {
       setOptions({});
       setLoading(false);
       setError("");
@@ -126,13 +128,25 @@ export function CatalogFilters({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [admin, kind, revision]);
-  const fields = categoryFields(kind);
+  }, [admin, kind, revision, storefront]);
+  const primaryKeys = [
+    "size",
+    "tyre_width",
+    "aspect_ratio",
+    "rim_diameter",
+    "diameter",
+    "width",
+  ];
+  const fields = categoryFields(kind).filter(
+    ([key]) =>
+      !storefront || ["pcd", "wheel_offset", "center_bore"].includes(key),
+  );
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const next = { ...values };
     for (const key of [...filterKeys, ...(admin ? ["q"] : [])]) {
+      if (storefront && primaryKeys.includes(key)) continue;
       delete next[key];
       const value = data.get(key);
       if (typeof value === "string" && value.trim()) next[key] = value.trim();
@@ -187,7 +201,8 @@ export function CatalogFilters({
       open={initiallyOpen}
     >
       <summary>
-        Фильтры{filterKeys.some((key) => values[key]) ? " · применены" : ""}
+        Фильтры
+        {filterKeys.some((key) => values[key]) ? " · применены" : ""}
       </summary>
       {error && (
         <p role="alert">
@@ -239,7 +254,9 @@ export function CatalogFilters({
             </label>
           ))}
           {range("price", "Цена, ₽", 1000000000)}
-          {kind === "tyre" && range("tread", "Протектор, %", 100, "any")}
+          {kind === "tyre" &&
+            !storefront &&
+            range("tread", "Протектор, %", 100, "any")}
           {admin && range("stock", "Запас, ед.", 1000000000)}
           {admin && (
             <label className="filter-checkbox">
@@ -270,7 +287,11 @@ export function CatalogFilters({
               className="secondary"
               onClick={() => {
                 const next = { ...values };
-                for (const key of [...filterKeys, ...(admin ? ["q"] : [])])
+                for (const key of [
+                  ...filterKeys,
+                  ...(storefront ? ["radius", "tyre_size"] : []),
+                  ...(admin ? ["q"] : []),
+                ])
                   delete next[key];
                 apply(next);
               }}

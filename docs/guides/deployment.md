@@ -206,3 +206,23 @@ production migration script: сначала проверить bootstrap/GRANT �
 [Rewrites](https://render.com/docs/redirects-rewrites),
 [Manual deploy](https://render.com/docs/deploys),
 [Free limitations](https://render.com/docs/free).
+
+## Выпуск подбора каталога (миграция catalog 00005)
+
+Порядок: миграция 00005 → новый catalog API → пересборка frontend.
+Requests API не требует изменения. Миграция добавляет generated radius обеим
+specs-таблицам, size_key шинам, два индекса и столбцы в конец проекции.
+Прежние характеристики, фотографии, остатки и идентификаторы сохраняются.
+Проверены старый API/snapshot с новой схемой и прежний Save в integration-тестах.
+
+Перед миграцией нужна актуальная резервная копия локальной/целевой БД по её
+обычной процедуре. Миграция транзакционная, lock_timeout=5s,
+statement_timeout=30s; индексы создаются обычным CREATE INDEX. На большем
+каталоге заранее оценить время и блокировки на отдельной копии. Ошибка
+ожидания блокировки требует повторного запуска в подходящее окно, а не
+отключения ограничений вслепую. CONCURRENTLY в эту миграцию не включён.
+
+Откат frontend/API может оставить новые столбцы и индексы: destructive down
+не требуется. Перед публикацией frontend проверить новый endpoint selection,
+legacy filters, страницу каталога и snapshot. Реальный production rollout
+и замеры внешней сети выполняются владельцем; агент их не выполнял.

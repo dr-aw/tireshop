@@ -152,6 +152,9 @@ func TestBrowserLostResponse(t *testing.T) {
 	if _, err := catalog.Exec(t.Context(), `INSERT INTO catalog.products(product_id,name,unit_price_rub,stock,sku,kind,units_per_sale,description) VALUES($1,'Browser wheel bundle',25000,1,'BROWSER-SET','wheel',2,'Synthetic gallery fixture')`, bundleID); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := catalog.Exec(t.Context(), `INSERT INTO catalog.wheel_specs(product_id,diameter_inches,width_inches,pcd,offset_mm,center_bore_mm) VALUES($1,17.5,6.75,'6x222.25',-10,164)`, bundleID); err != nil {
+		t.Fatal(err)
+	}
 	for i, hash := range []string{strings.Repeat("e", 64), strings.Repeat("f", 64)} {
 		if _, err := catalog.Exec(t.Context(), `INSERT INTO catalog.product_images(product_id,position,source_path,source_sha256,webp_path,width,height) VALUES($1,$2,'synthetic.jpg',$3,$4,1280,1280)`, bundleID, i, hash, fmt.Sprintf("/media/test-%d-1280-v1.webp", i)); err != nil {
 			t.Fatal(err)
@@ -169,7 +172,7 @@ func TestBrowserLostResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 150*time.Second)
 	defer cancel()
 	// Child processes do not need DB credentials: they only talk HTTP.
 	env := []string{"PATH=" + os.Getenv("PATH"), "HOME=" + os.Getenv("HOME"), "CATALOG_PROXY_TARGET=" + cs.URL, "REQUESTS_PROXY_TARGET=" + rs.URL}

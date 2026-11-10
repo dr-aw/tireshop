@@ -272,3 +272,24 @@
 :root[data-theme="dark"] .administrator .admin-primary:hover {
   background: #b51f2c;
 }
+
+:root[data-theme="dark"] .selection-categories .category-link {
+  color: var(--theme-text);
+}
+:root[data-theme="dark"] .selection-categories .category-link.selected {
+  background: var(--red);
+  color: white;
+}
+:root[data-theme="dark"]
+  .selection-categories
+  .category-link
+  > span:last-child {
+  color: inherit;
+}
+:root[data-theme="dark"] .radius-option {
+  color: var(--muted);
+}
+:root[data-theme="dark"] .radius-option[aria-pressed="true"],
+:root[data-theme="dark"] .size-option[aria-pressed="true"] {
+  color: var(--theme-danger);
+}

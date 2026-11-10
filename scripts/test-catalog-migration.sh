@@ -20,12 +20,26 @@ CREATE TABLE public.catalog_migration_before AS SELECT to_jsonb(p) AS value FROM
 INSERT INTO catalog.product_images(product_id,position,source_path,source_sha256,webp_path,width,height)
  VALUES('eeeeeeee-0000-4000-8000-000000000001',0,'synthetic.jpg','synthetic','/media/synthetic.webp',1280,1280);
 SQL
+mise exec -- goose -env none -dir migrations/catalog -table catalog.goose_db_version up-to 4
+psql -X -v ON_ERROR_STOP=1 <<'SQL'
+CREATE TABLE public.selection_migration_before AS SELECT to_jsonb(p) AS value FROM catalog.product_details p;
+SQL
 mise exec -- goose -env none -dir migrations/catalog -table catalog.goose_db_version up
 psql -X -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM public.selection_migration_before b
+ LEFT JOIN catalog.product_details p ON p.product_id=(b.value->>'product_id')::uuid
+ WHERE p.product_id IS NULL OR to_jsonb(p)-ARRAY['radius','size_key'] <> b.value) THEN
+  RAISE EXCEPTION 'Version 4 data changed during selection migration';
+ END IF;
+ IF EXISTS(SELECT 1 FROM catalog.tyre_specs WHERE radius IS DISTINCT FROM rim_diameter_inches)
+ OR EXISTS(SELECT 1 FROM catalog.wheel_specs WHERE radius IS DISTINCT FROM diameter_inches)
+ OR NOT EXISTS(SELECT 1 FROM catalog.tyre_specs WHERE size='295/80R22.5' AND radius=22.5 AND size_key='295/80R22.5')
+ OR NOT EXISTS(SELECT 1 FROM catalog.tyre_specs WHERE size='Unrecognized original' AND radius IS NULL AND size_key IS NULL)
+ THEN RAISE EXCEPTION 'Selection derivation mismatch'; END IF;
  IF EXISTS(SELECT 1 FROM public.catalog_migration_before b
  LEFT JOIN catalog.product_details p ON p.product_id=(b.value->>'product_id')::uuid
- WHERE p.product_id IS NULL OR to_jsonb(p)-ARRAY['tyre_width','tyre_width_unit','aspect_ratio','rim_diameter'] <> b.value) THEN
+ WHERE p.product_id IS NULL OR to_jsonb(p)-ARRAY['tyre_width','tyre_width_unit','aspect_ratio','rim_diameter','radius','size_key'] <> b.value) THEN
   RAISE EXCEPTION 'Existing values changed during migration';
  END IF;
  IF NOT EXISTS(SELECT 1 FROM catalog.tyre_specs WHERE size='295/80R22.5' AND width_value=295 AND width_unit='mm' AND aspect_ratio=80 AND rim_diameter_inches=22.5)
@@ -39,5 +53,6 @@ DELETE FROM catalog.product_images;
 DELETE FROM catalog.products WHERE sku LIKE 'MIGRATE-%';
 DELETE FROM catalog.specs_migration_archive;
 DROP TABLE public.catalog_migration_before;
+DROP TABLE public.selection_migration_before;
 SQL
 echo 'PASS: populated catalog migration preserves values, units, stock, versions and media.'

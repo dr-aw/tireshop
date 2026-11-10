@@ -2,11 +2,15 @@ import { routeFilters, categoryPath } from "./page-data";
 import { useEffect, useState } from "react";
 import {
   characteristicKeys,
-  cleanCategoryFilters,
   filterKeys,
   type FilterValues,
 } from "./catalog-filters";
+import {
+  cleanStorefrontFilters,
+  selectionKeys,
+} from "./storefront-selection-state";
 const keys = new Set([
+  ...selectionKeys,
   ...characteristicKeys,
   ...filterKeys,
   "q",
@@ -21,7 +25,7 @@ function read(defaults: FilterValues = {}): FilterValues {
       ([key, value]) => keys.has(key) && value !== "",
     ),
   );
-  return cleanCategoryFilters({ ...defaults, ...values });
+  return cleanStorefrontFilters({ ...defaults, ...values });
 }
 export function useCatalogNavigation(defaults: FilterValues = {}, live = true) {
   const [values, setValues] = useState(() =>
@@ -68,7 +72,7 @@ export function useCatalogNavigation(defaults: FilterValues = {}, live = true) {
   }, [values, live]);
   function navigate(next: FilterValues, page = 1) {
     const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(cleanCategoryFilters(next)))
+    for (const [key, value] of Object.entries(cleanStorefrontFilters(next)))
       if (key !== "page" && value) params.set(key, value);
     if (page > 1) params.set("page", String(page));
     const query = params.toString();
