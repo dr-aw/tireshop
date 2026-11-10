@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"tireshop/internal/requests/postgres"
 )
 
@@ -22,6 +23,11 @@ func pageOffset(w http.ResponseWriter, r *http.Request) (int, bool) {
 	return n, true
 }
 func adminError(w http.ResponseWriter, err error) {
+	var constraint *pgconn.PgError
+	if errors.As(err, &constraint) && constraint.Code == "23514" && (constraint.ConstraintName == "tyre_specs_diameter_range" || constraint.ConstraintName == "wheel_specs_diameter_range") {
+		fail(w, 422, "validation_error", "Посадочный диаметр должен быть от 11 до 25 дюймов включительно")
+		return
+	}
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		fail(w, 404, "not_found", "Запись не найдена")

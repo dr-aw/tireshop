@@ -8,7 +8,7 @@ test("characteristics expand by visual row on desktop and mobile", async ({
     [390, 2],
   ]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/?kind=tyre&brand=Browser+Filter+Brand");
+    await page.goto("/?kind=tyre&q=Browser+filter+tyre");
     await expect(page.locator(".product")).toHaveCount(24);
     const details = page.locator(".product .catalog-specs");
     await expect(details).toHaveCount(24);

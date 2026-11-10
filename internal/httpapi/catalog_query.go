@@ -21,7 +21,7 @@ import (
 var catalogFilterFields = []string{"brand", "model", "size", "condition", "production_year", "diameter", "width", "season", "load_index", "speed_index", "wheel_offset", "pcd", "wheel_type", "center_bore", "tyre_width", "aspect_ratio", "rim_diameter"}
 var numericCatalogFilters = map[string]bool{"production_year": true, "diameter": true, "width": true, "wheel_offset": true, "center_bore": true, "aspect_ratio": true, "rim_diameter": true}
 var tyreFilters = map[string]bool{"size": true, "tyre_width": true, "aspect_ratio": true, "rim_diameter": true, "season": true, "load_index": true, "speed_index": true, "tread_min": true, "tread_max": true}
-var wheelFilters = map[string]bool{"diameter": true, "width": true, "wheel_offset": true, "pcd": true, "wheel_type": true, "center_bore": true}
+var wheelFilters = map[string]bool{"width": true, "wheel_offset": true, "pcd": true, "wheel_type": true, "center_bore": true}
 
 // Keep the public default identical to the build-time snapshot ordering.
 const publicCatalogOrder = "EXISTS (SELECT 1 FROM catalog.product_images photo WHERE photo.product_id=p.product_id) DESC, p.product_id ASC"
@@ -43,7 +43,7 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 	invalid := func() (catalogQuery, error) {
 		return q, fmt.Errorf("Проверьте параметры фильтров и страницы")
 	}
-	allowed := map[string]bool{"q": true, "kind": true, "sort": true, "direction": true, "limit": true, "offset": true, "price_min": true, "price_max": true, "tread_min": true, "tread_max": true, "in_stock": true}
+	allowed := map[string]bool{"q": true, "kind": true, "sort": true, "direction": true, "limit": true, "offset": true, "price_min": true, "price_max": true, "tread_min": true, "tread_max": true, "in_stock": true, "radius": true, "tyre_size": true}
 	for _, f := range catalogFilterFields {
 		allowed[f] = true
 	}
@@ -80,6 +80,35 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 	if kind != "" {
 		add("p.kind=$%d", kind)
 	}
+	// Match stored indexed dimensions, without applying functions to their columns.
+	if values.Get("radius") != "" || values.Get("diameter") != "" || values.Get("tyre_size") != "" {
+		if kind == "" || (values.Get("tyre_size") != "" && kind != "tyre") {
+			return invalid()
+		}
+		table := "catalog.tyre_specs"
+		if kind == "wheel" {
+			table = "catalog.wheel_specs"
+		}
+		conditions := []string{}
+		for _, key := range []string{"radius", "diameter"} {
+			if radius := values.Get(key); radius != "" {
+				n, err := strconv.ParseFloat(radius, 64)
+				if err != nil || math.IsNaN(n) || math.IsInf(n, 0) || n <= 0 || n > 10000 {
+					return invalid()
+				}
+				q.Args = append(q.Args, radius)
+				conditions = append(conditions, fmt.Sprintf("diameter=$%d", len(q.Args)))
+			}
+		}
+		if size := values.Get("tyre_size"); size != "" {
+			if utf8.RuneCountInString(size) > 200 {
+				return invalid()
+			}
+			q.Args = append(q.Args, size)
+			conditions = append(conditions, fmt.Sprintf("size_key=$%d", len(q.Args)))
+		}
+		q.Where += " AND p.product_id IN (SELECT product_id FROM " + table + " WHERE " + strings.Join(conditions, " AND ") + ")"
+	}
 	for key := range values {
 		if values.Get(key) != "" && ((kind != "wheel" && wheelFilters[key]) || (kind != "tyre" && tyreFilters[key])) {
 			return invalid()
@@ -95,6 +124,9 @@ func parseCatalogQuery(values url.Values, admin bool) (catalogQuery, error) {
 		add("(p.name || ' ' || coalesce(p.sku,'') || ' ' || coalesce(p.size,'')) ILIKE $%d", "%"+search+"%")
 	}
 	for _, field := range catalogFilterFields {
+		if field == "diameter" {
+			continue
+		}
 		value := values.Get(field)
 		if value == "" {
 			continue
@@ -296,4 +328,14 @@ func sortedFacets(sets map[string]map[string]bool) map[string][]string {
 		result[field] = options
 	}
 	return result
+}
+
+// Materialize only the page IDs before constructing JSON details and reading photos.
+// Applying the same order again to the small page preserves the public contract.
+func publicCatalogPageQuery(q catalogQuery) (string, []any) {
+	args := append(append([]any(nil), q.Args...), q.Limit, q.Offset)
+	sql := "WITH selected AS MATERIALIZED (SELECT p.product_id FROM catalog.product_details p WHERE " + q.Where +
+		" ORDER BY " + q.Order + fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)-1, len(args)) +
+		") SELECT " + productColumns + " FROM selected JOIN catalog.product_details p USING(product_id) ORDER BY " + q.Order
+	return sql, args
 }

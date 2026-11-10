@@ -140,3 +140,7 @@ mise run frontend:build
 export PLAYWRIGHT_TEST_MODULE="$(mise where npm:@playwright/test)/node_modules/@playwright/test"
 playwright test --config frontend/ssg-tests/playwright.config.cjs --grep 'direct media'
 '''
+
+[tasks."test:selection-performance"]
+description = "Measure selection SQL and HTTP on 2000/20000 synthetic products in a disposable local DB"
+run = "TIRESHOP_SELECTION_BENCH=1 bash scripts/test-db.sh"

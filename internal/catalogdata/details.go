@@ -41,7 +41,11 @@ var Fields = []string{"tyre_width", "tyre_width_unit", "aspect_ratio", "rim_diam
 func Select(alias string) string {
 	parts := []string{}
 	for _, field := range Fields {
-		parts = append(parts, "'"+field+"',"+alias+"."+field)
+		expression := alias + "." + field
+		if field == "diameter" {
+			expression = "CASE WHEN " + alias + ".kind='wheel' THEN " + expression + " END"
+		}
+		parts = append(parts, "'"+field+"',"+expression)
 	}
 	return "jsonb_build_object(" + strings.Join(parts, ",") + ")"
 }

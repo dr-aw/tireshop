@@ -11,7 +11,7 @@ test("catalog filters paginate on the server, restore URL history and keep the c
   ).toBeVisible();
   await expect(allFilters.getByLabel("Только в наличии")).toBeVisible();
   await page.goto(
-    "/?kind=tyre&brand=Browser+Filter+Brand&condition=obsolete&sort=unit_price_rub#catalog",
+    "/?kind=tyre&q=Browser+filter+tyre&brand=obsolete&condition=obsolete&sort=unit_price_rub#catalog",
   );
   await expect(page.locator(".product")).toHaveCount(24);
   await expect(page.locator(".results-heading")).toContainText("30");
@@ -52,12 +52,10 @@ test("catalog filters paginate on the server, restore URL history and keep the c
     if (!(await filters.evaluate((el) => el.open)))
       await filters.locator("summary").click();
   }
-  await filters
-    .getByRole("combobox", { name: "Ширина шины", exact: true })
-    .selectOption("315 mm");
-  await filters
-    .getByRole("combobox", { name: "Профиль, %", exact: true })
-    .selectOption("70");
+  await page.getByRole("button", { name: /^R22\.5, / }).click();
+  await page.getByRole("button", { name: /^315\/70R22\.5 / }).click();
+  await expect(page).toHaveURL(/diameter=22.5/);
+  await expect(page).toHaveURL(/tyre_size=/);
   await filters.getByLabel("Цена, ₽: от", { exact: true }).fill("1025");
   await filters.getByRole("button", { name: "Применить", exact: true }).click();
   await expect(page).not.toHaveURL(/page=2/);
@@ -78,7 +76,7 @@ test("catalog filters paginate on the server, restore URL history and keep the c
       exact: true,
     }),
   ).toHaveCount(0);
-  await page.getByRole("link", { name: "Грузовые диски" }).click();
+  await page.getByRole("link", { name: "Диски", exact: true }).click();
   await expect(page).toHaveURL(/kind=wheel/);
   for (const label of ["Производитель", "Модель", "Состояние", "Год выпуска"])
     await expect(filters.getByLabel(label, { exact: true })).toHaveCount(0);
@@ -92,21 +90,21 @@ test("catalog filters paginate on the server, restore URL history and keep the c
   await page.screenshot({ path: ".tmp/catalog-filters-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
-  await filters.locator("summary").click();
   await expect(
     filters.getByRole("button", { name: "Применить", exact: true }),
   ).toBeVisible();
   const diameterBox = await filters
-    .getByLabel("Диаметр диска, дюймы", { exact: true })
+    .getByLabel("Вылет ET, мм", { exact: true })
     .boundingBox();
   const widthBox = await filters
-    .getByLabel("Ширина диска, дюймы", { exact: true })
+    .getByLabel("Сверловка PCD", { exact: true })
     .boundingBox();
   expect(Math.abs(diameterBox.y - widthBox.y)).toBeLessThan(2);
   expect(diameterBox.x + diameterBox.width).toBeLessThan(widthBox.x);
-  await expect(
-    filters.getByLabel("Диаметр диска, дюймы", { exact: true }),
-  ).toHaveCSS("padding-right", "32px");
+  await expect(filters.getByLabel("Вылет ET, мм", { exact: true })).toHaveCSS(
+    "padding-right",
+    "32px",
+  );
   const searchFits = await page
     .locator(".catalog-search-form")
     .evaluate((form) => {
@@ -190,6 +188,14 @@ test("typed editor derives tyre dimensions and clears them when changing kind", 
   await expect(row).toHaveCount(1);
   const href = await row.locator(".admin-product-link").getAttribute("href");
   await row.getByRole("button", { name: "Изменить" }).click();
+  await page.getByLabel("Размер шины", { exact: true }).fill("205/85R26");
+  await page.getByRole("button", { name: "Сохранить товар" }).click();
+  await expect(
+    page.getByText(
+      "Посадочный диаметр должен быть от 11 до 25 дюймов включительно",
+      { exact: true },
+    ),
+  ).toBeVisible();
   await page.getByLabel("Размер шины", { exact: true }).fill("11R22.5");
   await page.getByRole("button", { name: "Сохранить товар" }).click();
   await expect(page.locator(".admin-notice")).toHaveText("Товар сохранён");
