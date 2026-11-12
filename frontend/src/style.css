@@ -1373,6 +1373,7 @@ footer {
 }
 .product-page-actions button {
   padding: 15px 24px;
+  height: auto;
   margin: 0;
 }
 .product-page-specifications {
