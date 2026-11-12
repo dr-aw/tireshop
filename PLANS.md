@@ -9,6 +9,17 @@
 2026-11-12: пользователь подключил GitHub как React/Bun. Подготовить отдельный
 build runner с locked frontend-инструментами и обязательными SSG_CATALOG_URL /
 SITE_ORIGIN. Публикуется frontend/dist, корень репозитория сохраняется.
+Первый deploy падал на COPY package.json из корня. Второй лог подтвердил:
+путь проекта frontend, выход dist, команда cd .. && bash scripts/timeweb-static-build.sh
+успешно находит runner; корневой манифест не требуется, заготовка удалена.
+Следующий блокер — нет curl в Bun-образе. В панели нужны системные зависимости
+curl git unzip xz-utils; runtime-сборка после их добавления ещё не проверена.
+Третий лог: frontend-инструменты установлены, но mise run автоматически
+доставляет весь toolchain и падает на Terraform HTTP 404. Runner исправлен:
+--skip-tools для frontend-задач, PATH из выбранных mise which bun/node/tsc/vite.
+Проверены install/build с отдельным MISE_DATA_DIR и только четырьмя выбранными
+инструментами (ссылки на установленные binaries), без backend/infra установок.
+Реальный повторный deploy после исправления ещё не проверен.
 Пилот сначала проверяет статику/SSG. Внешний /api proxy в frontend-панели
 не подтверждён документацией; полноценная покупка требует отдельного решения
 прокси, проверки origins/cookies и маршрутов. Проверка: shell syntax,

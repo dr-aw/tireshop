@@ -22,5 +22,13 @@ MISE_VERSION="$timeweb_mise_version" MISE_INSTALL_PATH="$HOME/.local/bin/mise" s
 export PATH="$HOME/.local/bin:$PATH"
 mise trust "$PWD/mise.toml"
 mise install --locked bun node npm:vite npm:typescript
-mise run frontend:install
-mise run frontend:build
+# --skip-tools also skips normal tool activation. Export only the binaries
+# selected above, so tasks and the Vite child process do not rely on shims.
+for frontend_command in bun node tsc vite; do
+  frontend_binary=$(mise which "$frontend_command")
+  export PATH="$(dirname "$frontend_binary"):$PATH"
+done
+# The selected tools are installed above. A regular `run` auto-installs every
+# tool in mise.toml, including backend and infrastructure tools.
+mise run --skip-tools frontend:install
+mise run --skip-tools frontend:build
